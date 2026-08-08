@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+pymupdf
+python-dotenv
+google-generativeai
+sentence-transformers
+pinecone-client
+requests
