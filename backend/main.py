@@ -8,6 +8,10 @@ from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
 import google.generativeai as genai
+try:
+    import groq
+except ImportError:
+    groq = None
 
 load_dotenv()
 
@@ -23,6 +27,7 @@ app.add_middleware(
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Initialize Gemini if key is provided and not placeholder
 if GEMINI_API_KEY and GEMINI_API_KEY != "paste_your_gemini_api_key_here":
@@ -31,6 +36,13 @@ if GEMINI_API_KEY and GEMINI_API_KEY != "paste_your_gemini_api_key_here":
 else:
     model = None
     print("WARNING: Gemini API key not found. Using mocked AI responses.")
+
+# Initialize Groq if key is provided
+if GROQ_API_KEY and GROQ_API_KEY != "paste_your_groq_api_key_here":
+    groq_client = groq.Groq(api_key=GROQ_API_KEY)
+else:
+    groq_client = None
+    print("WARNING: Groq API key not found. Will fallback to Gemini or mock.")
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     text = ""
@@ -76,18 +88,58 @@ async def upload_resume(file: UploadFile = File(...)):
     contents = await file.read()
     extracted_text = extract_text_from_pdf(contents)
     
-    # Use Gemini to extract skills and job title
-    parsed_data = {"job_title": "Software Engineer", "skills": ["React", "Python"]}
+    # Use LLM to extract skills and job title
+    parsed_data = {
+        "job_title": "Software Engineer", 
+        "ats_score": 85,
+        "executive_summary": "This candidate demonstrates a strong foundation in modern web development, particularly in frontend technologies. Their experience aligns well with mid-level Software Engineering roles. However, there is a lack of quantifiable metrics in their work experience, which could hinder their performance in automated screening systems.",
+        "skills": ["React", "Python", "TypeScript", "Node.js"],
+        "key_strengths": [
+            {"title": "Frontend Architecture", "explanation": "Extensive use of React and modern state management tools indicates the ability to build scalable user interfaces."},
+            {"title": "Problem Solving", "explanation": "Past projects show a strong pattern of identifying inefficiencies and implementing technical solutions."},
+            {"title": "Fast Learner", "explanation": "The timeline of projects indicates an ability to quickly pick up new frameworks and deliver results."}
+        ],
+        "areas_for_improvement": [
+            {"title": "Cloud Deployment", "explanation": "There is a lack of experience with AWS, GCP, or Azure. Consider getting a basic cloud certification."},
+            {"title": "Testing", "explanation": "No mention of Jest, Cypress, or unit testing frameworks. Adding these will significantly boost your profile."},
+            {"title": "Quantifiable Metrics", "explanation": "Your experience lacks numbers. Instead of saying 'improved performance', state 'reduced load time by 40%'."}
+        ],
+        "formatting_feedback": "The resume is well-structured but could benefit from more concise bullet points rather than paragraphs in the experience section."
+    }
     
-    if model:
-        prompt = f"Analyze this resume text and extract the most likely target job title and an array of top 3 skills. Return ONLY valid JSON format like {{\"job_title\": \"...\", \"skills\": [\"...\", \"...\"]}}. Resume Text: {extracted_text[:3000]}"
-        try:
+    prompt = f"""Analyze this resume text in extreme detail and act as an expert technical recruiter and career coach.
+Return ONLY a highly detailed JSON object matching this exact structure:
+{{
+    "job_title": "The most likely target job title (e.g. Senior Frontend Developer)", 
+    "ats_score": A number between 0 and 100 representing ATS compatibility,
+    "executive_summary": "A detailed 3-4 sentence paragraph summarizing the candidate's overall profile, career trajectory, and market readiness.",
+    "skills": ["An array of the top 5-8 technical or soft skills extracted"],
+    "key_strengths": [
+        {{"title": "Short title of strength", "explanation": "A detailed 2-sentence explanation of why this is a strength based on the resume."}},
+        (Provide exactly 3 strengths)
+    ],
+    "areas_for_improvement": [
+        {{"title": "Short title of weakness/gap", "explanation": "A detailed 2-sentence explanation and actionable advice on how to improve this."}},
+        (Provide exactly 3 areas for improvement)
+    ],
+    "formatting_feedback": "A 1-2 sentence constructive critique on the resume's format, grammar, or readability."
+}}
+Resume Text: {extracted_text[:3000]}"""
+
+    try:
+        if groq_client:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama3-8b-8192",
+            )
+            clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
+            parsed_data = json.loads(clean_text)
+        elif model:
             response = model.generate_content(prompt)
-            # clean json
             clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
             parsed_data = json.loads(clean_text)
-        except Exception as e:
-            print(f"Gemini error: {e}")
+    except Exception as e:
+        print(f"LLM parsing error: {e}")
             
     jobs = get_jobs_from_jsearch(parsed_data.get("job_title", "Software Engineer"))
             

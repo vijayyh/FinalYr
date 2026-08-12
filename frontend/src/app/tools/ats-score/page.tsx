@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { UploadCloud, CheckCircle, Zap, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function ATSScorePage() {
   const [jobDescription, setJobDescription] = useState("");
@@ -39,90 +40,125 @@ export default function ATSScorePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h1 className="text-3xl font-bold text-foreground mb-2">ATS Compatibility Checker</h1>
-      <p className="text-foreground/60 mb-8">Compare your resume against a specific job description to predict your ATS score and find missing keywords.</p>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-5xl mx-auto"
+    >
+      <div className="mb-12">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F4F1EA] border border-[#D1C9B9] text-xs font-bold text-stone-600 mb-6 uppercase tracking-widest shadow-sm">
+          <span>Optimization Engine</span>
+        </div>
+        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-black mb-4 leading-tight">ATS Compatibility Checker</h1>
+        <p className="text-lg text-stone-600 leading-relaxed max-w-2xl">Compare your resume against a specific job description to predict your ATS score and find missing keywords.</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="flex flex-col gap-4">
-          <div className="p-6 rounded-2xl bg-foreground/5 backdrop-blur-xl border border-foreground/10 text-center flex flex-col items-center justify-center h-48 border-dashed hover:border-indigo-500/50 hover:bg-foreground/10 transition-colors">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="flex flex-col gap-6">
+          <div className="p-8 rounded-3xl bg-[#F4F1EA] border border-[#D1C9B9] text-center flex flex-col items-center justify-center h-48 border-dashed shadow-sm transition-all duration-300">
             {resumeText ? (
               <>
-                <CheckCircle className="w-8 h-8 text-green-500 mb-3" />
-                <span className="text-sm font-medium text-foreground mb-1">Resume Uploaded</span>
-                <span className="text-xs text-foreground/50">Ready for analysis</span>
+                <div className="w-12 h-12 rounded-2xl bg-[#E5DFD3] flex items-center justify-center mb-4 border border-[#D1C9B9]">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <span className="text-lg font-bold text-black mb-1">Resume Uploaded</span>
+                <span className="text-sm font-medium text-stone-500">Ready for analysis</span>
               </>
             ) : (
               <>
-                <UploadCloud className="w-8 h-8 text-indigo-400 mb-3" />
-                <span className="text-sm font-medium text-foreground mb-1">No Resume Found</span>
-                <span className="text-xs text-foreground/50">Please upload a resume on the Home page first</span>
+                <div className="w-12 h-12 rounded-2xl bg-[#E5DFD3] flex items-center justify-center mb-4 border border-[#D1C9B9]">
+                  <UploadCloud className="w-6 h-6 text-stone-400" />
+                </div>
+                <span className="text-lg font-bold text-black mb-1">No Resume Found</span>
+                <span className="text-sm font-medium text-stone-500">Please upload a resume on the Home page first</span>
               </>
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground/80">Target Job Description</label>
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-bold text-stone-600 uppercase tracking-widest">Target Job Description</label>
             <textarea 
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste the job description here..."
-              className="w-full h-48 bg-background border border-foreground/10 rounded-xl p-4 text-sm text-foreground focus:outline-none focus:border-indigo-500 transition-colors resize-none shadow-inner"
+              className="w-full h-64 bg-[#F4F1EA] border border-[#D1C9B9] rounded-3xl p-6 text-stone-900 focus:outline-none focus:border-stone-400 transition-all duration-300 resize-none shadow-sm placeholder:text-stone-400"
             />
           </div>
 
           <button 
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-transform duration-200 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25"
+            className="w-full py-4 rounded-2xl bg-black text-[#F4F1EA] hover:bg-stone-800 font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isAnalyzing ? "Analyzing..." : "Calculate ATS Score"}
-            {!isAnalyzing && <Zap className="w-4 h-4" />}
+            {isAnalyzing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-[#F4F1EA] border-t-transparent rounded-full animate-spin" />
+                Calculating...
+              </>
+            ) : (
+              <>
+                Calculate ATS Score
+                <Zap className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
 
         {/* Results Panel */}
-        <div className="p-8 rounded-2xl bg-foreground/5 backdrop-blur-xl border border-foreground/10 relative overflow-hidden shadow-2xl">
+        <div className="p-10 rounded-[2rem] bg-[#F4F1EA] border border-[#D1C9B9] relative overflow-hidden shadow-sm h-full flex flex-col">
           {result ? (
-            <div className="animate-in fade-in duration-500">
-              <div className="flex flex-col items-center mb-8">
-                <div className={`text-6xl font-bold mb-2 ${result.score >= 80 ? 'text-green-500' : result.score >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col h-full"
+            >
+              <div className="flex flex-col items-center mb-10 pb-8 border-b border-[#D1C9B9]">
+                <div className={`text-7xl font-extrabold tracking-tight mb-3 ${result.score >= 80 ? 'text-green-700' : result.score >= 60 ? 'text-orange-600' : 'text-red-600'}`}>
                   {result.score}%
                 </div>
-                <div className={`text-sm font-medium px-3 py-1 rounded-full ${result.score >= 80 ? 'bg-green-500/10 text-green-500' : result.score >= 60 ? 'bg-yellow-500/10 text-yellow-500' : 'bg-red-500/10 text-red-500'}`}>
+                <div className="px-6 py-2 rounded-full border border-[#D1C9B9] bg-[#E5DFD3] text-sm font-bold uppercase tracking-widest text-stone-600 shadow-sm">
                   {result.score >= 80 ? 'Great Match' : result.score >= 60 ? 'Fair Match' : 'Needs Work'}
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-foreground/10 pb-2">Missing Keywords</h3>
+              <div className="mb-8">
+                <h3 className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-4">Missing Keywords</h3>
                 <ul className="flex flex-wrap gap-2">
-                  {result.missingSkills && result.missingSkills.map((skill: string, i: number) => (
-                    <li key={i} className="text-xs bg-red-500/10 text-red-500 dark:text-red-400 px-3 py-1.5 rounded-md border border-red-500/20">{skill}</li>
-                  ))}
+                  {result.missingSkills && result.missingSkills.length > 0 ? (
+                    result.missingSkills.map((skill: string, i: number) => (
+                      <li key={i} className="text-sm font-bold text-red-700 bg-red-50 border border-red-200 px-4 py-2 rounded-xl shadow-sm">{skill}</li>
+                    ))
+                  ) : (
+                    <li className="text-sm font-medium text-stone-500">None detected! Excellent match.</li>
+                  )}
                 </ul>
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3 border-b border-foreground/10 pb-2">Top Strengths</h3>
-                <ul className="flex flex-col gap-2">
+                <h3 className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-4">Top Strengths</h3>
+                <ul className="flex flex-col gap-4">
                   {result.strengths && result.strengths.map((str: string, i: number) => (
-                    <li key={i} className="text-sm text-foreground/80 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    <li key={i} className="text-base text-stone-700 font-medium leading-relaxed flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
                       {str}
                     </li>
                   ))}
                 </ul>
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center opacity-50">
-              <ShieldCheck className="w-16 h-16 text-foreground/40 mb-4" />
-              <p className="text-foreground/60">Paste a job description to see your score.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="w-20 h-20 rounded-3xl bg-[#E5DFD3] flex items-center justify-center mb-6 border border-[#D1C9B9] shadow-sm">
+                <ShieldCheck className="w-10 h-10 text-stone-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-black mb-2">Awaiting Description</h3>
+              <p className="text-stone-500 font-medium max-w-sm">Paste a job description and calculate your score to see detailed insights here.</p>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
