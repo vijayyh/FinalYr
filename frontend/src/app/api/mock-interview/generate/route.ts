@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const { jobRole, jobDescription = "", resumeText } = await request.json();
@@ -50,10 +52,11 @@ Requirements for Questions:
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
           messages: [
-            { role: "system", content: "You are an expert technical interviewer. Output only valid JSON." },
+            { role: "system", content: "You are an expert technical interviewer. Output ONLY valid JSON." },
             { role: "user", content: prompt }
           ],
           temperature: 0.7,
+          response_format: { type: "json_object" },
         }),
       });
 
