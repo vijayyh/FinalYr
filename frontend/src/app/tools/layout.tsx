@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, FileText, Mic, LayoutDashboard, Home } from "lucide-react";
+import { ShieldCheck, FileText, Mic, LayoutDashboard, Home, GitFork } from "lucide-react";
 
 export default function ToolsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,6 +13,7 @@ export default function ToolsLayout({ children }: { children: React.ReactNode })
     { name: "ATS Score", href: "/tools/ats-score", icon: <ShieldCheck className="w-5 h-5" /> },
     { name: "Cover Letter", href: "/tools/cover-letter", icon: <FileText className="w-5 h-5" /> },
     { name: "Mock Interview", href: "/tools/mock-interview", icon: <Mic className="w-5 h-5" /> },
+    { name: "Skill Gap Analyzer", href: "/tools/skill-gap", icon: <GitFork className="w-5 h-5" /> },
   ];
 
   return (

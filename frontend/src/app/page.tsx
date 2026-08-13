@@ -163,6 +163,7 @@ export default function Home() {
           <Link href="/tools/ats-score" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">ATS Optimization</Link>
           <Link href="/tools/cover-letter" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cover Letters</Link>
           <Link href="/tools/mock-interview" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Interviews</Link>
+          <Link href="/tools/skill-gap" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Skill Gap Analyzer</Link>
         </div>
 
         <div className="flex items-center gap-4">

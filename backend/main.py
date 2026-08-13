@@ -2,6 +2,7 @@ import os
 import json
 import fitz  # PyMuPDF
 import requests
+import networkx as nx
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -156,8 +157,18 @@ class ATSRequest(BaseModel):
 
 @app.post("/api/tools/ats-score")
 async def ats_score(req: ATSRequest):
-    if model:
-        prompt = f"Compare this resume against the job description. Return ONLY valid JSON format like {{\"score\": 85, \"missingSkills\": [\"skill1\", \"skill2\"], \"strengths\": [\"str1\", \"str2\"]}}. Resume: {req.resume_text[:2000]} Job Desc: {req.job_description[:2000]}"
+    prompt = f"Compare this resume against the job description. Return ONLY valid JSON format like {{\"score\": 85, \"missingSkills\": [\"skill1\", \"skill2\"], \"strengths\": [\"str1\", \"str2\"]}}. Resume: {req.resume_text[:2000]} Job Desc: {req.job_description[:2000]}"
+    if groq_client:
+        try:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama3-8b-8192",
+            )
+            clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
+            return json.loads(clean_text)
+        except Exception as e:
+            print(f"Groq ATS score error: {e}")
+    elif model:
         try:
             response = model.generate_content(prompt)
             clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
@@ -178,8 +189,17 @@ class CoverLetterRequest(BaseModel):
 
 @app.post("/api/tools/cover-letter")
 async def generate_cover_letter(req: CoverLetterRequest):
-    if model:
-        prompt = f"Write a professional cover letter for the role of {req.job_role} at {req.company_name} based on this resume summary: {req.resume_text[:2000]}"
+    prompt = f"Write a professional cover letter for the role of {req.job_role} at {req.company_name} based on this resume summary: {req.resume_text[:2000]}"
+    if groq_client:
+        try:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama3-8b-8192",
+            )
+            return {"letter": response.choices[0].message.content}
+        except Exception as e:
+            print(f"Groq cover letter error: {e}")
+    elif model:
         try:
             response = model.generate_content(prompt)
             return {"letter": response.text}
@@ -193,8 +213,18 @@ class MockInterviewRequest(BaseModel):
 
 @app.post("/api/tools/mock-interview")
 async def generate_mock_interview(req: MockInterviewRequest):
-    if model:
-        prompt = f"Generate 5 tough interview questions for a {req.job_role} based on this resume: {req.resume_text[:2000]}. Return ONLY a JSON array of strings."
+    prompt = f"Generate 5 tough interview questions for a {req.job_role} based on this resume: {req.resume_text[:2000]}. Return ONLY a JSON array of strings."
+    if groq_client:
+        try:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama3-8b-8192",
+            )
+            clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
+            return {"questions": json.loads(clean_text)}
+        except Exception as e:
+            print(f"Groq mock interview error: {e}")
+    elif model:
         try:
             response = model.generate_content(prompt)
             clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
@@ -202,6 +232,216 @@ async def generate_mock_interview(req: MockInterviewRequest):
         except: pass
         
     return {"questions": ["Mock Question 1?", "Mock Question 2?"]}
+
+class SkillGapRequest(BaseModel):
+    resume_text: str
+    job_description: str
+
+# Node standardization mapping
+SKILL_MAP = {
+    "python": "Python",
+    "py": "Python",
+    "javascript": "JavaScript",
+    "js": "JavaScript",
+    "typescript": "TypeScript",
+    "ts": "TypeScript",
+    "react": "React",
+    "reactjs": "React",
+    "react.js": "React",
+    "next": "Next.js",
+    "nextjs": "Next.js",
+    "next.js": "Next.js",
+    "node": "Node.js",
+    "nodejs": "Node.js",
+    "node.js": "Node.js",
+    "docker": "Docker",
+    "kubernetes": "Kubernetes",
+    "k8s": "Kubernetes",
+    "aws": "AWS",
+    "django": "Django",
+    "flask": "Flask",
+    "fastapi": "FastAPI",
+    "machine learning": "Machine Learning",
+    "ml": "Machine Learning",
+    "deep learning": "Deep Learning",
+    "dl": "Deep Learning",
+    "pytorch": "PyTorch",
+    "tensorflow": "TensorFlow",
+    "tf": "TensorFlow",
+    "sql": "SQL",
+    "postgresql": "PostgreSQL",
+    "postgres": "PostgreSQL",
+    "mongodb": "MongoDB",
+    "nosql": "NoSQL",
+    "tailwind": "TailwindCSS",
+    "tailwindcss": "TailwindCSS",
+    "css": "CSS",
+    "html": "HTML"
+}
+
+def standardize_skills(skills):
+    standardized = set()
+    for s in skills:
+        s_clean = s.strip().lower()
+        if s_clean in SKILL_MAP:
+            standardized.add(SKILL_MAP[s_clean])
+        else:
+            standardized.add(s.strip().title())
+    return list(standardized)
+
+def extract_skills_with_ai(text: str) -> list[str]:
+    if not text.strip():
+        return []
+    prompt = f"""Extract a clean list of technical skills, programming languages, libraries, frameworks, tools, databases, and core concepts mentioned in the following text.
+Return ONLY a valid JSON array of strings, for example: ["Python", "React", "Docker", "Machine Learning"]. Do not include any explanations, introduction, or markdown backticks.
+Text: {text[:4000]}"""
+    try:
+        if groq_client:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama3-8b-8192",
+            )
+            clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
+            if clean_text.startswith("["):
+                return json.loads(clean_text)
+            else:
+                start = clean_text.find("[")
+                end = clean_text.rfind("]") + 1
+                if start != -1 and end != -1:
+                    return json.loads(clean_text[start:end])
+        elif model:
+            response = model.generate_content(prompt)
+            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+            if clean_text.startswith("["):
+                return json.loads(clean_text)
+            else:
+                start = clean_text.find("[")
+                end = clean_text.rfind("]") + 1
+                if start != -1 and end != -1:
+                    return json.loads(clean_text[start:end])
+    except Exception as e:
+        print(f"Error extracting skills: {e}")
+    
+    keywords = ["python", "javascript", "typescript", "react", "next.js", "node.js", "docker", "kubernetes", "aws", "django", "flask", "fastapi", "machine learning", "deep learning", "pytorch", "tensorflow", "sql", "postgresql", "mongodb", "tailwind", "css", "html"]
+    found = []
+    text_lower = text.lower()
+    for kw in keywords:
+        if kw in text_lower:
+            found.append(kw)
+    return standardize_skills(found)
+
+# Build directed graph for prerequisites
+G_skill = nx.DiGraph()
+edges = [
+    ("Python", "Web Frameworks"),
+    ("Python", "Data Science"),
+    ("Python", "Automation"),
+    ("Web Frameworks", "Django"),
+    ("Web Frameworks", "Flask"),
+    ("Web Frameworks", "FastAPI"),
+    ("Data Science", "Machine Learning"),
+    ("Data Science", "Data Visualization"),
+    ("Machine Learning", "Deep Learning"),
+    ("Machine Learning", "Natural Language Processing"),
+    ("Deep Learning", "PyTorch"),
+    ("Deep Learning", "TensorFlow"),
+    ("JavaScript", "React"),
+    ("JavaScript", "Node.js"),
+    ("JavaScript", "TypeScript"),
+    ("React", "Next.js"),
+    ("React", "Redux"),
+    ("TypeScript", "Next.js"),
+    ("SQL", "PostgreSQL"),
+    ("SQL", "Database Design"),
+    ("Database Design", "NoSQL"),
+    ("NoSQL", "MongoDB"),
+    ("Docker", "Kubernetes"),
+    ("Docker", "CI/CD"),
+    ("HTML", "CSS"),
+    ("CSS", "TailwindCSS")
+]
+G_skill.add_edges_from(edges)
+
+@app.post("/api/tools/skill-gap")
+async def analyze_skill_gap(req: SkillGapRequest):
+    user_skills_raw = extract_skills_with_ai(req.resume_text)
+    target_skills_raw = extract_skills_with_ai(req.job_description)
+    
+    user_skills = standardize_skills(user_skills_raw)
+    target_skills = standardize_skills(target_skills_raw)
+    
+    user_expanded = set(user_skills)
+    for skill in user_skills:
+        if G_skill.has_node(skill):
+            user_expanded.update(nx.ancestors(G_skill, skill))
+            
+    target_expanded = set(target_skills)
+    for skill in target_skills:
+        if G_skill.has_node(skill):
+            target_expanded.update(nx.ancestors(G_skill, skill))
+            
+    if not user_expanded and not target_expanded:
+        jaccard_overlap = 0.0
+    else:
+        intersection = user_expanded.intersection(target_expanded)
+        union = user_expanded.union(target_expanded)
+        jaccard_overlap = round((len(intersection) / len(union)) * 100, 1)
+        
+    matched_skills = [s for s in target_skills if s in user_skills]
+    missing_skills = [s for s in target_skills if s not in user_skills]
+    
+    paths = []
+    bridge_skills = set()
+    
+    for m in missing_skills:
+        if not G_skill.has_node(m):
+            continue
+            
+        shortest_path = None
+        shortest_len = float('inf')
+        
+        for u in user_skills:
+            if G_skill.has_node(u) and nx.has_path(G_skill, u, m):
+                try:
+                    path = nx.shortest_path(G_skill, source=u, target=m)
+                    if len(path) < shortest_len:
+                        shortest_len = len(path)
+                        shortest_path = path
+                except nx.NetworkXNoPath:
+                    pass
+                    
+        if shortest_path:
+            paths.append({
+                "skill": m,
+                "path": shortest_path
+            })
+            for node in shortest_path[1:-1]:
+                bridge_skills.add(node)
+        else:
+            preds = list(G_skill.predecessors(m))
+            if preds:
+                paths.append({
+                    "skill": m,
+                    "path": [preds[0], m]
+                })
+                bridge_skills.add(preds[0])
+                
+    bridge_skills = [b for b in bridge_skills if b not in user_skills]
+    
+    return {
+        "status": "success",
+        "user_skills": user_skills,
+        "target_skills": target_skills,
+        "matched_skills": matched_skills,
+        "missing_skills": missing_skills,
+        "bridge_skills": list(bridge_skills),
+        "jaccard_overlap": jaccard_overlap,
+        "roadmap": paths
+    }
+
+@app.post("/api/skill-gap")
+async def analyze_skill_gap_alt(req: SkillGapRequest):
+    return await analyze_skill_gap(req)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
