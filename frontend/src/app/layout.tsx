@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "AI-powered resume analysis, ATS scoring, and job matching.",
 };
 
+import Navbar from "@/components/Navbar";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -33,7 +35,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <Navbar />
+          <div className="flex-1 flex flex-col relative z-10">
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

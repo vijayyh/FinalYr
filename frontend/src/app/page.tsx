@@ -25,8 +25,6 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [adviceIndex, setAdviceIndex] = useState(0);
   const [showSplash, setShowSplash] = useState(true);
 
@@ -149,46 +147,6 @@ export default function Home() {
 
       {/* Background Decorators */}
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-bl from-accent/5 to-transparent rounded-full blur-3xl pointer-events-none -mr-40 -mt-40" />
-
-      {/* Navbar */}
-      <nav className="w-full z-50 py-6 px-8 flex justify-between items-center max-w-[1400px] mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-foreground rounded-xl flex items-center justify-center shadow-lg">
-            <FileText className="w-5 h-5 text-background" />
-          </div>
-          <span className="text-xl font-extrabold tracking-tight">ResumePro</span>
-        </div>
-        
-        <div className="hidden md:flex items-center gap-8">
-          <Link href="/tools/ats-score" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">ATS Optimization</Link>
-          <Link href="/tools/cover-letter" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cover Letters</Link>
-          <Link href="/tools/mock-interview" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Interviews</Link>
-          <Link href="/tools/skill-gap" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Skill Gap Analyzer</Link>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {mounted && (
-            <button 
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border"
-            >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          )}
-          <button 
-            onClick={() => { setAuthMode("login"); setShowAuthModal(true); }}
-            className="text-sm font-bold text-foreground hover:text-muted-foreground transition-colors px-4 py-2"
-          >
-            Sign In
-          </button>
-          <button 
-            onClick={() => { setAuthMode("signup"); setShowAuthModal(true); }}
-            className="text-sm font-bold bg-foreground text-background px-6 py-2.5 rounded-full hover:scale-105 transition-transform shadow-md"
-          >
-            Download for free
-          </button>
-        </div>
-      </nav>
 
       {/* Hero Section */}
       <main className="max-w-[1400px] w-full mx-auto px-8 flex flex-col lg:flex-row items-center justify-between gap-8 pt-2 pb-8 relative z-10">
@@ -385,75 +343,38 @@ export default function Home() {
               <p className="text-muted-foreground font-medium">Stop wasting hours staring at a blank page. Instantly generate highly targeted cover letters customized for specific job descriptions.</p>
             </div>
             
-            <div className="p-8 rounded-[2rem] bg-background border border-border shadow-sm hover:shadow-xl transition-shadow">
-              <div className="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
-                <Zap className="w-7 h-7 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Mock Interviews</h3>
-              <p className="text-muted-foreground font-medium">Practice makes perfect. Simulate real-world technical and behavioral interviews with our advanced AI persona.</p>
-            </div>
+            <Link href="/tools/mock-interview" className="block outline-none focus:ring-4 focus:ring-green-500 rounded-[2rem]">
+              <motion.div 
+                animate={{ 
+                  y: [0, -8, 0],
+                  boxShadow: [
+                    "0px 4px 20px rgba(74, 222, 128, 0.1)",
+                    "0px 10px 30px rgba(74, 222, 128, 0.3)",
+                    "0px 4px 20px rgba(74, 222, 128, 0.1)"
+                  ]
+                }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="relative p-8 rounded-[2rem] bg-background border-2 border-green-400 dark:border-green-500 shadow-lg cursor-pointer overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-green-400/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-green-400/30 transition-colors" />
+                <div className="absolute top-4 right-4">
+                  <span className="px-3 py-1 bg-green-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-md flex items-center gap-1 animate-pulse">
+                    <Sparkles className="w-3 h-3" /> New Feature
+                  </span>
+                </div>
+                <div className="w-14 h-14 rounded-2xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center mb-6 shadow-inner relative z-10">
+                  <Zap className="w-7 h-7 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors relative z-10 flex items-center justify-between">
+                  Interactive Mock Interviews
+                  <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all" />
+                </h3>
+                <p className="text-muted-foreground font-medium relative z-10">Our most powerful tool! Practice makes perfect. Simulate real-world technical and behavioral interviews with our advanced AI persona step-by-step.</p>
+              </motion.div>
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* Auth Modal */}
-      <AnimatePresence>
-        {showAuthModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card w-full max-w-md p-8 rounded-[2rem] border border-border shadow-2xl relative"
-            >
-              <button 
-                onClick={() => setShowAuthModal(false)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="mb-8">
-                <div className="w-12 h-12 bg-foreground rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                  <Sparkles className="w-6 h-6 text-background" />
-                </div>
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">
-                  {authMode === "login" ? "Welcome back" : "Create an account"}
-                </h2>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {authMode === "login" ? "Sign in to access your saved resumes." : "Sign up to start optimizing your career."}
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <input 
-                  type="email" 
-                  placeholder="Email address"
-                  className="w-full bg-background border border-border rounded-xl p-4 text-sm font-medium text-foreground focus:outline-none focus:border-foreground transition-colors"
-                />
-                <input 
-                  type="password" 
-                  placeholder="Password"
-                  className="w-full bg-background border border-border rounded-xl p-4 text-sm font-medium text-foreground focus:outline-none focus:border-foreground transition-colors"
-                />
-                <button className="w-full py-4 bg-foreground text-background rounded-xl font-bold text-sm shadow-md hover:bg-foreground/90 transition-colors">
-                  {authMode === "login" ? "Sign In" : "Sign Up"}
-                </button>
-              </div>
-
-              <p className="mt-8 text-center text-xs font-medium text-muted-foreground">
-                {authMode === "login" ? "Don't have an account? " : "Already have an account? "}
-                <button 
-                  onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
-                  className="text-foreground hover:underline"
-                >
-                  {authMode === "login" ? "Sign up" : "Sign in"}
-                </button>
-              </p>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );

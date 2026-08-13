@@ -18,7 +18,7 @@ export async function GET() {
     status: "success",
     keys: {
       groq: isGroqActive ? "Active" : "Missing",
-      gemini: isGeminiActive ? "Active" : "Missing",
+      gemini: isGeminiActive ? "Active" : "Missing (Optional)",
     }
   });
 }
