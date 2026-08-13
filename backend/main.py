@@ -130,9 +130,10 @@ Resume Text: {extracted_text[:3000]}"""
         if groq_client:
             response = groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
+                response_format={"type": "json_object"}
             )
-            clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
+            clean_text = response.choices[0].message.content.strip()
             parsed_data = json.loads(clean_text)
         elif model:
             response = model.generate_content(prompt)
@@ -156,14 +157,22 @@ class ATSRequest(BaseModel):
 
 @app.post("/api/tools/ats-score")
 async def ats_score(req: ATSRequest):
-    if model:
-        prompt = f"Compare this resume against the job description. Return ONLY valid JSON format like {{\"score\": 85, \"missingSkills\": [\"skill1\", \"skill2\"], \"strengths\": [\"str1\", \"str2\"]}}. Resume: {req.resume_text[:2000]} Job Desc: {req.job_description[:2000]}"
-        try:
+    prompt = f"Compare this resume against the job description. Return ONLY valid JSON format like {{\"score\": 85, \"missingSkills\": [\"skill1\", \"skill2\"], \"strengths\": [\"str1\", \"str2\"]}}. Resume: {req.resume_text[:2000]} Job Desc: {req.job_description[:2000]}"
+    try:
+        if groq_client:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.1-8b-instant",
+                response_format={"type": "json_object"}
+            )
+            clean_text = response.choices[0].message.content.strip()
+            return json.loads(clean_text)
+        elif model:
             response = model.generate_content(prompt)
             clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
             return json.loads(clean_text)
-        except Exception as e:
-            pass
+    except Exception as e:
+        print(f"ATS LLM Error: {e}")
             
     return {
         "score": 85,
@@ -178,12 +187,19 @@ class CoverLetterRequest(BaseModel):
 
 @app.post("/api/tools/cover-letter")
 async def generate_cover_letter(req: CoverLetterRequest):
-    if model:
-        prompt = f"Write a professional cover letter for the role of {req.job_role} at {req.company_name} based on this resume summary: {req.resume_text[:2000]}"
-        try:
+    prompt = f"Write a professional cover letter for the role of {req.job_role} at {req.company_name} based on this resume summary: {req.resume_text[:2000]}"
+    try:
+        if groq_client:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.1-8b-instant"
+            )
+            return {"letter": response.choices[0].message.content.strip()}
+        elif model:
             response = model.generate_content(prompt)
             return {"letter": response.text}
-        except: pass
+    except Exception as e:
+        print(f"Cover Letter LLM Error: {e}")
     
     return {"letter": f"Dear Hiring Manager at {req.company_name},\n\n[MOCKED] I am writing to apply for the {req.job_role} role..."}
 
@@ -193,15 +209,27 @@ class MockInterviewRequest(BaseModel):
 
 @app.post("/api/tools/mock-interview")
 async def generate_mock_interview(req: MockInterviewRequest):
-    if model:
-        prompt = f"Generate 5 tough interview questions for a {req.job_role} based on this resume: {req.resume_text[:2000]}. Return ONLY a JSON array of strings."
-        try:
+    prompt = f"Generate 5 tough interview questions for a {req.job_role} based on this resume: {req.resume_text[:2000]}. Return ONLY a JSON object containing an array of objects under the key 'questions'. Each object must have keys 'question', 'focus', and 'difficulty'. Example: {{\"questions\": [{{\"question\": \"...\", \"focus\": \"Architecture\", \"difficulty\": \"Hard\"}}]}}"
+    try:
+        if groq_client:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.1-8b-instant",
+                response_format={"type": "json_object"}
+            )
+            clean_text = response.choices[0].message.content.strip()
+            return json.loads(clean_text)
+        elif model:
             response = model.generate_content(prompt)
             clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-            return {"questions": json.loads(clean_text)}
-        except: pass
+            return json.loads(clean_text)
+    except Exception as e:
+        print(f"Mock Interview LLM Error: {e}")
         
-    return {"questions": ["Mock Question 1?", "Mock Question 2?"]}
+    return {"questions": [
+        {"question": "Mock Question 1?", "focus": "Technical", "difficulty": "Medium"},
+        {"question": "Mock Question 2?", "focus": "Behavioral", "difficulty": "Hard"}
+    ]}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

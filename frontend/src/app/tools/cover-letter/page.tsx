@@ -9,13 +9,39 @@ export default function CoverLetterPage() {
   const [companyName, setCompanyName] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [letter, setLetter] = useState("");
+  const [resumeText, setResumeText] = useState<string | null>(null);
 
-  const handleGenerate = () => {
+  React.useEffect(() => {
+    const storedText = localStorage.getItem("resumeText");
+    if (storedText) setResumeText(storedText);
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!jobRole || !companyName) return alert("Please enter both target role and company name.");
+    if (!resumeText) return alert("Please go to Home and upload a resume first.");
+
     setIsGenerating(true);
-    setTimeout(() => {
-      setLetter(`Dear Hiring Manager at ${companyName || '[Company Name]'},\n\nI am writing to express my strong interest in the ${jobRole || '[Job Role]'} position. With my robust background in software engineering and hands-on experience in modern web technologies, I am confident in my ability to make an immediate impact at your organization.\n\nIn my recent projects, I have successfully developed scalable full-stack applications using React, Next.js, and Node.js. My approach focuses on creating intuitive user interfaces while ensuring robust backend performance. I am particularly drawn to your team's innovative work and believe my technical skills and proactive mindset align perfectly with your goals.\n\nI look down to the opportunity to discuss how my background, skills, and certifications will be beneficial to your team.\n\nSincerely,\n[Your Name]`);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/tools/cover-letter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_role: jobRole,
+          company_name: companyName,
+          resume_text: resumeText,
+        }),
+      });
+      const data = await res.json();
+      if (data.letter) {
+        setLetter(data.letter);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate cover letter.");
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   return (
