@@ -8,34 +8,38 @@ export default function MockInterviewPage() {
   const [jobRole, setJobRole] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [resumeText, setResumeText] = useState<string | null>(null);
 
-  const handleGenerate = () => {
+  React.useEffect(() => {
+    const storedText = localStorage.getItem("resumeText");
+    if (storedText) setResumeText(storedText);
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!jobRole) return alert("Please enter a target role.");
+    if (!resumeText) return alert("Please go to Home and upload a resume first.");
+
     setIsGenerating(true);
-    setTimeout(() => {
-      setQuestions([
-        {
-          question: "Can you describe a time when you had to design a scalable frontend architecture? What were the key trade-offs?",
-          focus: "Architecture",
-          difficulty: "Hard"
-        },
-        {
-          question: "How do you handle state management in a complex React application?",
-          focus: "Technical",
-          difficulty: "Medium"
-        },
-        {
-          question: "Tell me about a time you had to work with a difficult stakeholder or team member.",
-          focus: "Behavioral",
-          difficulty: "Medium"
-        },
-        {
-          question: "Explain how you would optimize the performance of a slow-loading web application.",
-          focus: "Performance",
-          difficulty: "Hard"
-        }
-      ]);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/tools/mock-interview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_role: jobRole,
+          resume_text: resumeText,
+        }),
+      });
+      const data = await res.json();
+      if (data.questions) {
+        setQuestions(data.questions);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate mock interview questions.");
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
   return (
