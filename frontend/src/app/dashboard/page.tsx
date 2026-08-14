@@ -9,7 +9,8 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
-  BarChart3
+  BarChart3,
+  GitFork
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -133,6 +134,26 @@ export default function Dashboard() {
               </div>
               <h3 className="font-bold mb-2">ATS Check</h3>
               <p className="text-sm text-muted-foreground">Scan your resume against any job description.</p>
+            </div>
+          </Link>
+
+          <Link href="/tools/skill-gap" className="group">
+            <div className="glass h-full p-6 rounded-3xl border border-white/20 dark:border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-orange-500/50">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors">
+                <GitFork className="w-5 h-5 text-orange-600 dark:text-orange-400 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="font-bold mb-2">Skill Gap</h3>
+              <p className="text-sm text-muted-foreground">Map prerequisite skills and visual roadmap pathways.</p>
+            </div>
+          </Link>
+
+          <Link href="/tools/linkedin-optimizer" className="group">
+            <div className="glass h-full p-6 rounded-3xl border border-white/20 dark:border-white/10 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-sky-500/50">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center mb-4 group-hover:bg-sky-500 transition-colors">
+                <Sparkles className="w-5 h-5 text-sky-600 dark:text-sky-400 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="font-bold mb-2">LinkedIn Optimizer</h3>
+              <p className="text-sm text-muted-foreground">Transform your LinkedIn profile into a recruiter magnet.</p>
             </div>
           </Link>
         </div>

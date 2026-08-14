@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, FileText, ArrowRight, Moon, Sun, X, Sparkles, Target, Zap, Layout } from "lucide-react";
+import { UploadCloud, FileText, ArrowRight, Moon, Sun, X, Sparkles, Target, Zap, Layout, GitFork } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 
@@ -424,7 +424,19 @@ export default function Home() {
               </div>
             </Link>
 
-            <Link href="/tools/mock-interview" className="block outline-none focus:ring-4 focus:ring-green-500 rounded-[2rem] lg:col-span-2">
+            <Link href="/tools/skill-gap" className="block group">
+              <div className="glass h-full p-8 rounded-[2rem] border-white/20 dark:border-white/10 shadow-lg group-hover:shadow-2xl group-hover:-translate-y-2 transition-all duration-300 group-hover:border-white/40 dark:group-hover:border-white/20">
+                <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center mb-6 shadow-md group-hover:scale-110 transition-transform">
+                  <GitFork className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-3 transition-colors flex items-center justify-between">
+                  Skill Gap Analyzer <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all" />
+                </h3>
+                <p className="text-muted-foreground font-medium">Map prerequisite skills and dynamic roadmap pathways. Check how your skills connect with the target job descriptions visually.</p>
+              </div>
+            </Link>
+
+            <Link href="/tools/mock-interview" className="block outline-none focus:ring-4 focus:ring-green-500 rounded-[2rem]">
               <motion.div 
                 animate={{ 
                   y: [0, -8, 0],
@@ -435,7 +447,7 @@ export default function Home() {
                   ]
                 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="relative p-8 rounded-[2rem] bg-background border-2 border-green-400 dark:border-green-500 shadow-lg cursor-pointer overflow-hidden group"
+                className="relative h-full p-8 rounded-[2rem] bg-background border-2 border-green-400 dark:border-green-500 shadow-lg cursor-pointer overflow-hidden group"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-green-400/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-green-400/30 transition-colors" />
                 <div className="absolute top-4 right-4">
@@ -450,7 +462,7 @@ export default function Home() {
                   Interactive Mock Interviews
                   <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transform -translate-x-4 group-hover:translate-x-0 transition-all" />
                 </h3>
-                <p className="text-muted-foreground font-medium relative z-10">Our most powerful tool! Practice makes perfect. Simulate real-world technical and behavioral interviews with our advanced AI persona step-by-step.</p>
+                <p className="text-muted-foreground font-medium relative z-10">Our most powerful tool! Practice technical and behavioral interviews with our advanced AI persona step-by-step.</p>
               </motion.div>
             </Link>
           </div>

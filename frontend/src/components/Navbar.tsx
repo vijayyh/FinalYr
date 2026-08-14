@@ -33,6 +33,8 @@ export default function Navbar() {
           <Link href="/tools/ats-score" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">ATS Check</Link>
           <Link href="/tools/cover-letter" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Cover Letters</Link>
           <Link href="/tools/mock-interview" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Interviews</Link>
+          <Link href="/tools/skill-gap" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Skill Gap</Link>
+          <Link href="/tools/linkedin-optimizer" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">LinkedIn</Link>
         </div>
 
         <div className="flex items-center gap-4">
