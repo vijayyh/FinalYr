@@ -38,12 +38,12 @@ else:
     model = None
     print("WARNING: Gemini API key not found. Using mocked AI responses.")
 
-# Initialize Groq if key is provided
-if GROQ_API_KEY and GROQ_API_KEY != "paste_your_groq_api_key_here":
+# Initialize Groq if key is provided and library is installed
+if groq and GROQ_API_KEY and GROQ_API_KEY != "paste_your_groq_api_key_here":
     groq_client = groq.Groq(api_key=GROQ_API_KEY)
 else:
     groq_client = None
-    print("WARNING: Groq API key not found. Will fallback to Gemini or mock.")
+    print("WARNING: Groq API key not found or library not installed. Will fallback to Gemini or mock.")
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     text = ""
