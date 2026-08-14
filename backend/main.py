@@ -298,7 +298,7 @@ Text: {text[:4000]}"""
         if groq_client:
             response = groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
             )
             clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
             if clean_text.startswith("["):
@@ -360,6 +360,85 @@ edges = [
     ("CSS", "TailwindCSS")
 ]
 G_skill.add_edges_from(edges)
+
+from typing import List, Dict, Optional, Any
+
+class ExperienceModel(BaseModel):
+    job_title: str
+    company: str
+    date: str
+    description: str
+
+class EducationModel(BaseModel):
+    degree: str
+    university: str
+    year: str
+
+class ResumeBuilderRequest(BaseModel):
+    personal: Dict[str, str]
+    education: List[EducationModel]
+    experience: List[ExperienceModel]
+    skills: str
+
+@app.post("/api/build-resume")
+async def build_resume(req: ResumeBuilderRequest):
+    if not groq_client:
+        raise HTTPException(status_code=500, detail="Groq client is not initialized. Please check your .env GROQ_API_KEY")
+
+    prompt = f"""
+You are an expert resume writer. The user has provided their raw resume details.
+Your task is to:
+1. Enhance the experience bullet points using strong action verbs and quantifiable metrics where possible. Make them sound professional and impactful.
+2. Generate a professional summary based on the provided details.
+3. Fix any grammar and spelling issues.
+
+Return ONLY a valid JSON object with the following structure, and nothing else (no markdown wrappers around the JSON):
+{{
+    "personal": {{
+        "name": "...",
+        "email": "...",
+        "phone": "...",
+        "linkedin": "..."
+    }},
+    "summary": "...",
+    "education": [
+        {{"degree": "...", "university": "...", "year": "..."}}
+    ],
+    "experience": [
+        {{
+            "job_title": "...",
+            "company": "...",
+            "date": "...", 
+            "bullets": ["Enhanced bullet 1", "Enhanced bullet 2"]
+        }}
+    ],
+    "skills": ["Skill 1", "Skill 2"]
+}}
+
+Raw Data:
+Personal: {req.personal}
+Education: {[e.model_dump() for e in req.education]}
+Experience: {[e.model_dump() for e in req.experience]}
+Skills: {req.skills}
+"""
+    try:
+        completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "You are a helpful API that outputs only valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.3,
+        )
+        response_text = completion.choices[0].message.content.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text.strip("`").replace("json\n", "", 1)
+        
+        resume_data = json.loads(response_text)
+        return {"status": "success", "data": resume_data}
+    except Exception as e:
+        print(f"Error generating resume: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate resume from LLM.")
 
 @app.post("/api/tools/skill-gap")
 async def analyze_skill_gap(req: SkillGapRequest):
@@ -441,6 +520,44 @@ async def analyze_skill_gap(req: SkillGapRequest):
 @app.post("/api/skill-gap")
 async def analyze_skill_gap_alt(req: SkillGapRequest):
     return await analyze_skill_gap(req)
+
+class LinkedInOptimizerRequest(BaseModel):
+    resume_text: str
+
+@app.post("/api/tools/linkedin-optimizer")
+async def optimize_linkedin(req: LinkedInOptimizerRequest):
+    prompt = f"""Act as an expert LinkedIn recruiter and profile optimizer. Based on the following resume text, generate actionable insights to optimize the user's LinkedIn profile. 
+Return ONLY a valid JSON object matching this exact structure:
+{{
+    "headline_suggestions": ["Suggestion 1", "Suggestion 2", "Suggestion 3"],
+    "about_summary": "A compelling, first-person 'About' summary.",
+    "experience_tips": ["Tip 1", "Tip 2", "Tip 3"],
+    "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
+}}
+Resume Text: {req.resume_text[:3000]}"""
+
+    try:
+        if groq_client:
+            response = groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="llama-3.1-8b-instant",
+                response_format={"type": "json_object"}
+            )
+            clean_text = response.choices[0].message.content.strip()
+            return json.loads(clean_text)
+        elif model:
+            response = model.generate_content(prompt)
+            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+            return json.loads(clean_text)
+    except Exception as e:
+        print(f"LinkedIn Optimizer LLM Error: {e}")
+    
+    return {
+        "headline_suggestions": ["Software Engineer at Tech", "Full Stack Developer", "Experienced Web Developer"],
+        "about_summary": "I am a skilled software engineer with experience in building web applications.",
+        "experience_tips": ["Add more metrics", "Use action verbs", "Highlight teamwork"],
+        "keywords": ["React", "Python", "JavaScript", "SQL", "Cloud"]
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
