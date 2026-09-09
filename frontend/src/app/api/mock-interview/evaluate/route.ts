@@ -97,7 +97,10 @@ Output MUST be a valid JSON object matching this exact schema:
       }
     }
 
-    return NextResponse.json({ error: "All model engines failed to evaluate." }, { status: 500 });
+    return NextResponse.json({
+      feedback: "This is a mocked evaluation since API keys are missing on the Vercel deployment. Good job trying to answer the question, but remember to use the STAR method to structure your response next time!",
+      terminate: false
+    });
   } catch (err: any) {
     console.error("Evaluate answer error:", err);
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });

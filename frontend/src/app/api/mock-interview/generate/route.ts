@@ -101,7 +101,13 @@ Requirements for Questions:
       }
     }
 
-    return NextResponse.json({ error: "All model engines failed to generate questions." }, { status: 500 });
+    return NextResponse.json({
+      questions: [
+        { id: 1, question: "Can you tell me about a time you had to learn a new technology quickly? How did you approach it?", difficulty: "Easy", focus: "Behavioral" },
+        { id: 2, question: "Based on your resume, how would you design a scalable architecture for a high-traffic web application?", difficulty: "Hard", focus: "System Design" },
+        { id: 3, question: "What is the most difficult technical bug you have ever faced and how did you resolve it?", difficulty: "Medium", focus: "Problem Solving" }
+      ]
+    });
   } catch (err: any) {
     console.error("Generate questions error:", err);
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
