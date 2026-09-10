@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { 
   UploadCloud, 
   CheckCircle, 
@@ -15,9 +16,16 @@ import {
   Network,
   ChevronRight,
   TrendingUp,
-  Award
+  Award,
+  Plus,
+  BookmarkCheck,
+  Check,
+  ExternalLink,
+  User,
+  ListPlus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUser } from "@/context/UserContext";
 
 interface RoadmapItem {
   skill: string;
@@ -47,6 +55,12 @@ export default function SkillGapPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
+  const { currentUser, refreshTrackedCount, trackedSkillsCount } = useUser();
+  const [trackedSkillNames, setTrackedSkillNames] = useState<string[]>([]);
+  const [trackingStatus, setTrackingStatus] = useState<Record<string, "loading" | "added">>({});
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load stored resume text if available
@@ -57,6 +71,94 @@ export default function SkillGapPage() {
       setResumeInputMode("paste");
     }
   }, []);
+
+  const fetchUserTrackedSkills = async () => {
+    if (!currentUser?.userId) return;
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/tracker/skills?user_id=${encodeURIComponent(currentUser.userId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.skills) {
+          setTrackedSkillNames(data.skills.map((s: any) => s.skill_name.toLowerCase()));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch user tracked skills", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserTrackedSkills();
+  }, [currentUser?.userId]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleTrackSingleSkill = async (skillName: string, category: string = "Target Gap", source: string = "Skill Gap Analyzer") => {
+    const skillLower = skillName.toLowerCase();
+    setTrackingStatus(prev => ({ ...prev, [skillLower]: "loading" }));
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/tracker/skills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: currentUser.userId,
+          skill_name: skillName,
+          category,
+          source,
+          status: "to_learn",
+        }),
+      });
+      if (res.ok) {
+        setTrackedSkillNames(prev => Array.from(new Set([...prev, skillLower])));
+        setTrackingStatus(prev => ({ ...prev, [skillLower]: "added" }));
+        await refreshTrackedCount();
+        showToast(`Added "${skillName}" to ${currentUser.name}'s Tracker`);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => {
+        setTrackingStatus(prev => {
+          const copy = { ...prev };
+          delete copy[skillLower];
+          return copy;
+        });
+      }, 2000);
+    }
+  };
+
+  const handleTrackAllMissing = async () => {
+    if (!result?.missing_skills || result.missing_skills.length === 0) return;
+    setBatchLoading(true);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/tracker/skills/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: currentUser.userId,
+          skills: result.missing_skills,
+          category: "Target Gap",
+          source: "Skill Gap Analyzer",
+        }),
+      });
+      if (res.ok) {
+        const newlyAdded = result.missing_skills.map(s => s.toLowerCase());
+        setTrackedSkillNames(prev => Array.from(new Set([...prev, ...newlyAdded])));
+        await refreshTrackedCount();
+        showToast(`Added ${result.missing_skills.length} missing skills to your tracker!`);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setBatchLoading(false);
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -198,15 +300,55 @@ export default function SkillGapPage() {
       transition={{ duration: 0.5 }}
       className="max-w-6xl mx-auto space-y-12"
     >
-      <div>
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F4F1EA] border border-[#D1C9B9] text-xs font-bold text-stone-600 mb-6 uppercase tracking-widest shadow-sm">
-          <GitFork className="w-3.5 h-3.5" />
-          <span>Graph-based Skill Gap Analysis</span>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-24 right-8 z-50 bg-stone-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-stone-700 text-sm font-semibold"
+          >
+            <BookmarkCheck className="w-5 h-5 text-green-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F4F1EA] border border-[#D1C9B9] text-xs font-bold text-stone-600 mb-6 uppercase tracking-widest shadow-sm">
+            <GitFork className="w-3.5 h-3.5" />
+            <span>Graph-based Skill Gap Analysis</span>
+          </div>
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-black mb-4 leading-tight">Skill Gap Analyzer</h1>
+          <p className="text-lg text-stone-600 leading-relaxed max-w-3xl">
+            Evaluate your resume against target jobs using a directed prerequisite skill graph. Discover target gaps, track missing skills, and unlock tailored learning roadmaps.
+          </p>
         </div>
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-black mb-4 leading-tight">Skill Gap Analyzer</h1>
-        <p className="text-lg text-stone-600 leading-relaxed max-w-3xl">
-          Evaluate your resume against target jobs using a directed prerequisite skill graph. Discover target gaps, find bridging skills, and explore tailored learning paths.
-        </p>
+
+        {/* Active User Profile & Tracker Quick Card */}
+        <div className="shrink-0 p-4 rounded-2xl bg-[#F4F1EA] border border-[#D1C9B9] shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+            {currentUser.name.charAt(0)}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-black">{currentUser.name}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-extrabold uppercase">
+                {trackedSkillsCount} in Tracker
+              </span>
+            </div>
+            <p className="text-[11px] text-stone-500 font-medium truncate max-w-[160px]">{currentUser.email}</p>
+          </div>
+          <Link
+            href="/tools/skill-tracker"
+            className="px-3.5 py-2 rounded-xl bg-black hover:bg-stone-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:scale-105"
+          >
+            <BookmarkCheck className="w-3.5 h-3.5 text-indigo-300" />
+            <span>Tracker</span>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -506,15 +648,31 @@ export default function SkillGapPage() {
                           {item.path.map((step, stepIdx) => {
                             const isTarget = step === item.skill;
                             const styles = getNodeStyles(step, isTarget, result.user_skills);
+                            const isTracked = trackedSkillNames.includes(step.toLowerCase());
                             return (
                               <React.Fragment key={stepIdx}>
                                 {stepIdx > 0 && (
                                   <ChevronRight className="w-5 h-5 text-stone-400 shrink-0" />
                                 )}
                                 <div className={`px-4 py-2.5 rounded-xl border flex flex-col items-start min-w-[120px] transition-all shadow-sm ${styles.bg}`}>
-                                  <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded mb-1.5 ${styles.badge}`}>
-                                    {styles.label}
-                                  </span>
+                                  <div className="w-full flex items-center justify-between gap-2 mb-1.5">
+                                    <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${styles.badge}`}>
+                                      {styles.label}
+                                    </span>
+                                    {!result.user_skills.includes(step) && (
+                                      isTracked ? (
+                                        <span className="text-[10px] text-green-700 font-bold" title="In your tracker">✓</span>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleTrackSingleSkill(step, isTarget ? "Target Gap" : "Bridge Skill")}
+                                          className="text-[10px] font-extrabold text-stone-600 hover:text-black hover:scale-110 transition-transform"
+                                          title="Track skill"
+                                        >
+                                          +Track
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
                                   <span className="text-sm font-extrabold tracking-tight">{step}</span>
                                 </div>
                               </React.Fragment>
@@ -571,27 +729,65 @@ export default function SkillGapPage() {
 
               {/* Missing Card */}
               <div className="p-8 rounded-[2rem] bg-[#F4F1EA] border border-[#D1C9B9] shadow-sm flex flex-col h-full">
-                <div className="flex items-center gap-3 mb-6 border-b border-[#D1C9B9] pb-4">
-                  <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-5 h-5 text-red-700" />
+                <div className="flex items-center justify-between mb-6 border-b border-[#D1C9B9] pb-4 gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center shrink-0">
+                      <AlertCircle className="w-5 h-5 text-red-700" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-black">Missing Gaps</h3>
+                      <p className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">Actionable Needs</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-black">Missing Gaps</h3>
-                    <p className="text-[10px] text-stone-500 uppercase tracking-wider font-bold">Actionable Needs</p>
-                  </div>
+
+                  {result.missing_skills.length > 0 && (
+                    <button
+                      onClick={handleTrackAllMissing}
+                      disabled={batchLoading}
+                      className="px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-black text-white text-[11px] font-bold transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 shrink-0"
+                      title="Add all missing skills to your Skill Tracker"
+                    >
+                      <ListPlus className="w-3.5 h-3.5 text-orange-300" />
+                      <span>{batchLoading ? "Adding..." : "Track All"}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex-1">
                   {result.missing_skills.length > 0 ? (
                     <div className="flex flex-wrap gap-2.5">
-                      {result.missing_skills.map((skill, i) => (
-                        <span 
-                          key={i} 
-                          className="px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold shadow-sm"
-                        >
-                          {skill}
-                        </span>
-                      ))}
+                      {result.missing_skills.map((skill, i) => {
+                        const isTracked = trackedSkillNames.includes(skill.toLowerCase());
+                        const status = trackingStatus[skill.toLowerCase()];
+                        return (
+                          <div 
+                            key={i} 
+                            className={`px-3 py-2 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2 transition-all ${
+                              isTracked 
+                                ? "bg-green-50 border-green-300 text-green-800" 
+                                : "bg-red-50 border-red-200 text-red-800 hover:border-red-300"
+                            }`}
+                          >
+                            <span>{skill}</span>
+                            {isTracked ? (
+                              <span className="flex items-center gap-1 text-[10px] font-extrabold text-green-700 bg-green-200/70 px-1.5 py-0.5 rounded-md">
+                                <Check className="w-3 h-3" />
+                                <span>Tracked</span>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleTrackSingleSkill(skill, "Target Gap")}
+                                disabled={status === "loading"}
+                                className="px-2 py-0.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow-xs"
+                                title="Add to Skill Tracker"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>{status === "loading" ? "..." : "Track"}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-stone-500 font-medium leading-relaxed italic">No missing skills detected! High compatibility.</p>
@@ -614,14 +810,38 @@ export default function SkillGapPage() {
                 <div className="flex-1">
                   {result.bridge_skills.length > 0 ? (
                     <div className="flex flex-wrap gap-2.5">
-                      {result.bridge_skills.map((skill, i) => (
-                        <span 
-                          key={i} 
-                          className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold shadow-sm"
-                        >
-                          {skill}
-                        </span>
-                      ))}
+                      {result.bridge_skills.map((skill, i) => {
+                        const isTracked = trackedSkillNames.includes(skill.toLowerCase());
+                        const status = trackingStatus[skill.toLowerCase()];
+                        return (
+                          <div 
+                            key={i} 
+                            className={`px-3 py-2 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-2 transition-all ${
+                              isTracked 
+                                ? "bg-green-50 border-green-300 text-green-800" 
+                                : "bg-blue-50 border-blue-200 text-blue-800 hover:border-blue-300"
+                            }`}
+                          >
+                            <span>{skill}</span>
+                            {isTracked ? (
+                              <span className="flex items-center gap-1 text-[10px] font-extrabold text-green-700 bg-green-200/70 px-1.5 py-0.5 rounded-md">
+                                <Check className="w-3 h-3" />
+                                <span>Tracked</span>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleTrackSingleSkill(skill, "Bridge Skill")}
+                                disabled={status === "loading"}
+                                className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow-xs"
+                                title="Add to Skill Tracker"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>{status === "loading" ? "..." : "Track"}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-stone-500 font-medium leading-relaxed italic">No additional bridge prerequisite skills identified.</p>
@@ -629,6 +849,29 @@ export default function SkillGapPage() {
                 </div>
               </div>
 
+            </div>
+
+            {/* Direct Tracker Callout Banner */}
+            <div className="p-8 rounded-[2rem] bg-gradient-to-r from-stone-900 via-indigo-950 to-stone-900 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-stone-800">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0">
+                  <BookmarkCheck className="w-7 h-7 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold tracking-tight">Active Skill Tracker & Removal Audit</h3>
+                  <p className="text-sm text-stone-300 mt-1 max-w-xl">
+                    Track your acquired and in-progress skills, set milestones, and inspect full removal history with exact timestamps and reason tracking.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/tools/skill-tracker"
+                className="px-6 py-3.5 rounded-xl bg-white text-stone-900 font-extrabold text-sm hover:bg-stone-100 transition-all flex items-center gap-2 shrink-0 shadow-lg hover:scale-105"
+              >
+                <span>Open Skill Tracker</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
 
           </motion.div>

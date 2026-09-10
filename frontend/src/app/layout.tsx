@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { UserProvider } from "@/context/UserContext";
 
 export const metadata: Metadata = {
   title: "Resume AI | Elevate Your Career",
@@ -35,10 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
-          <div className="flex-1 flex flex-col relative z-10">
-            {children}
-          </div>
+          <UserProvider>
+            <Navbar />
+            <div className="flex-1 flex flex-col relative z-10">
+              {children}
+            </div>
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>
