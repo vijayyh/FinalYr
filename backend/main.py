@@ -1,5 +1,8 @@
 import os
 import json
+import sqlite3
+import uuid
+from datetime import datetime
 import fitz  # PyMuPDF
 import requests
 import networkx as nx
@@ -525,6 +528,346 @@ Resume Text: {req.resume_text[:3000]}"""
         "experience_tips": ["Add more metrics", "Use action verbs", "Highlight teamwork"],
         "keywords": ["React", "Python", "JavaScript", "SQL", "Cloud"]
     }
+
+# ==========================================================
+# SKILL TRACKER API & PERSISTENCE (SQLite)
+# ==========================================================
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker.db")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_tracker_db():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tracked_skills (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        skill_name TEXT NOT NULL,
+        category TEXT DEFAULT 'Technical',
+        source TEXT DEFAULT 'Skill Gap Analyzer',
+        status TEXT DEFAULT 'to_learn',
+        target_role TEXT DEFAULT '',
+        notes TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        removed_at TEXT,
+        removal_reason TEXT
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tracked_skills_user ON tracked_skills(user_id);")
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS skill_activity_log (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        skill_id TEXT NOT NULL,
+        skill_name TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        timestamp TEXT NOT NULL
+    );
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_skill_activity_user ON skill_activity_log(user_id);")
+    conn.commit()
+    conn.close()
+
+init_tracker_db()
+
+class AddSkillRequest(BaseModel):
+    user_id: str
+    skill_name: str
+    category: str = "Technical"
+    source: str = "Skill Gap Analyzer"
+    status: str = "to_learn"
+    target_role: str = ""
+    notes: str = ""
+
+class BatchAddSkillRequest(BaseModel):
+    user_id: str
+    skills: list[str]
+    category: str = "Technical"
+    source: str = "Skill Gap Analyzer"
+    target_role: str = ""
+
+class UpdateSkillRequest(BaseModel):
+    status: str | None = None
+    notes: str | None = None
+    category: str | None = None
+
+class RemoveSkillRequest(BaseModel):
+    user_id: str
+    reason: str = "Removed by user"
+
+@app.get("/api/tracker/users")
+def get_tracker_users():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT user_id FROM tracked_skills ORDER BY user_id ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return {"users": [r["user_id"] for r in rows]}
+
+@app.get("/api/tracker/skills")
+def get_tracked_skills(user_id: str, include_removed: bool = False):
+    conn = get_db()
+    cursor = conn.cursor()
+    if include_removed:
+        cursor.execute("SELECT * FROM tracked_skills WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+    else:
+        cursor.execute("SELECT * FROM tracked_skills WHERE user_id = ? AND status != 'removed' ORDER BY created_at DESC", (user_id,))
+    skills = [dict(r) for r in cursor.fetchall()]
+    
+    # Calculate stats
+    cursor.execute("SELECT status, count(*) as count FROM tracked_skills WHERE user_id = ? GROUP BY status", (user_id,))
+    counts = {r["status"]: r["count"] for r in cursor.fetchall()}
+    conn.close()
+    
+    stats = {
+        "total_active": sum(v for k, v in counts.items() if k != "removed"),
+        "to_learn": counts.get("to_learn", 0),
+        "in_progress": counts.get("in_progress", 0),
+        "mastered": counts.get("mastered", 0),
+        "removed": counts.get("removed", 0)
+    }
+    return {"skills": skills, "stats": stats}
+
+@app.post("/api/tracker/skills")
+def add_tracked_skill(req: AddSkillRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    
+    # Check if this skill already exists for this user
+    cursor.execute("SELECT * FROM tracked_skills WHERE user_id = ? AND LOWER(skill_name) = LOWER(?)", (req.user_id, req.skill_name.strip()))
+    existing = cursor.fetchone()
+    
+    if existing:
+        existing_dict = dict(existing)
+        if existing_dict["status"] == "removed":
+            # Reactivate
+            cursor.execute("""
+                UPDATE tracked_skills 
+                SET status = ?, updated_at = ?, removed_at = NULL, removal_reason = NULL, notes = ?
+                WHERE id = ?
+            """, (req.status or "to_learn", now, req.notes or existing_dict["notes"], existing_dict["id"]))
+            
+            log_id = str(uuid.uuid4())
+            cursor.execute("""
+                INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (log_id, req.user_id, existing_dict["id"], req.skill_name.strip(), "restored", f"Re-added from {req.source}", now))
+            conn.commit()
+            cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (existing_dict["id"],))
+            result = dict(cursor.fetchone())
+            conn.close()
+            return result
+        conn.close()
+        return existing_dict
+
+    skill_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO tracked_skills (id, user_id, skill_name, category, source, status, target_role, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (skill_id, req.user_id, req.skill_name.strip(), req.category, req.source, req.status, req.target_role, req.notes, now, now))
+    
+    log_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (log_id, req.user_id, skill_id, req.skill_name.strip(), "added", f"Added from {req.source}", now))
+    
+    conn.commit()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (skill_id,))
+    result = dict(cursor.fetchone())
+    conn.close()
+    return result
+
+@app.post("/api/tracker/skills/batch")
+def batch_add_tracked_skills(req: BatchAddSkillRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    added = []
+    already_tracked = []
+    
+    for skill in req.skills:
+        skill_clean = skill.strip()
+        if not skill_clean:
+            continue
+        cursor.execute("SELECT * FROM tracked_skills WHERE user_id = ? AND LOWER(skill_name) = LOWER(?)", (req.user_id, skill_clean))
+        existing = cursor.fetchone()
+        if existing:
+            existing_dict = dict(existing)
+            if existing_dict["status"] == "removed":
+                cursor.execute("""
+                    UPDATE tracked_skills 
+                    SET status = 'to_learn', updated_at = ?, removed_at = NULL, removal_reason = NULL
+                    WHERE id = ?
+                """, (now, existing_dict["id"]))
+                log_id = str(uuid.uuid4())
+                cursor.execute("""
+                    INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (log_id, req.user_id, existing_dict["id"], skill_clean, "restored", f"Re-added in batch from {req.source}", now))
+                cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (existing_dict["id"],))
+                added.append(dict(cursor.fetchone()))
+            else:
+                already_tracked.append(existing_dict["skill_name"])
+        else:
+            skill_id = str(uuid.uuid4())
+            cursor.execute("""
+                INSERT INTO tracked_skills (id, user_id, skill_name, category, source, status, target_role, notes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'to_learn', ?, '', ?, ?)
+            """, (skill_id, req.user_id, skill_clean, req.category, req.source, req.target_role, now, now))
+            log_id = str(uuid.uuid4())
+            cursor.execute("""
+                INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (log_id, req.user_id, skill_id, skill_clean, "added", f"Added in batch from {req.source}", now))
+            cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (skill_id,))
+            added.append(dict(cursor.fetchone()))
+            
+    conn.commit()
+    conn.close()
+    return {"added": added, "already_tracked": already_tracked}
+
+@app.patch("/api/tracker/skills/{skill_id}")
+def update_tracked_skill(skill_id: str, req: UpdateSkillRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (skill_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Tracked skill not found")
+    
+    current = dict(row)
+    now = datetime.utcnow().isoformat()
+    new_status = req.status if req.status is not None else current["status"]
+    new_notes = req.notes if req.notes is not None else current["notes"]
+    new_category = req.category if req.category is not None else current["category"]
+    
+    cursor.execute("""
+        UPDATE tracked_skills
+        SET status = ?, notes = ?, category = ?, updated_at = ?
+        WHERE id = ?
+    """, (new_status, new_notes, new_category, now, skill_id))
+    
+    if req.status is not None and req.status != current["status"]:
+        log_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (log_id, current["user_id"], skill_id, current["skill_name"], "status_changed", f"Status changed from {current['status']} to {new_status}", now))
+        
+    conn.commit()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (skill_id,))
+    updated = dict(cursor.fetchone())
+    conn.close()
+    return updated
+
+@app.delete("/api/tracker/skills/{skill_id}")
+def remove_tracked_skill(skill_id: str, user_id: str, reason: str = "Removed by user"):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ? AND user_id = ?", (skill_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Tracked skill not found")
+    
+    current = dict(row)
+    now = datetime.utcnow().isoformat()
+    
+    # Calculate duration tracked
+    try:
+        created_dt = datetime.fromisoformat(current["created_at"])
+        now_dt = datetime.fromisoformat(now)
+        duration_delta = now_dt - created_dt
+        days = duration_delta.days
+        hours = duration_delta.seconds // 3600
+        minutes = (duration_delta.seconds % 3600) // 60
+        if days > 0:
+            duration_str = f"{days}d {hours}h"
+        elif hours > 0:
+            duration_str = f"{hours}h {minutes}m"
+        else:
+            duration_str = f"{max(1, minutes)}m"
+    except Exception:
+        duration_str = "recent"
+        
+    cursor.execute("""
+        UPDATE tracked_skills
+        SET status = 'removed', removed_at = ?, removal_reason = ?, updated_at = ?
+        WHERE id = ?
+    """, (now, reason, now, skill_id))
+    
+    log_id = str(uuid.uuid4())
+    log_details = f"Removed after {duration_str}. Reason: {reason}"
+    cursor.execute("""
+        INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (log_id, user_id, skill_id, current["skill_name"], "removed", log_details, now))
+    
+    conn.commit()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (skill_id,))
+    removed = dict(cursor.fetchone())
+    conn.close()
+    return removed
+
+@app.post("/api/tracker/skills/{skill_id}/restore")
+def restore_tracked_skill(skill_id: str, user_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ? AND user_id = ?", (skill_id, user_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Tracked skill not found")
+    
+    current = dict(row)
+    now = datetime.utcnow().isoformat()
+    cursor.execute("""
+        UPDATE tracked_skills
+        SET status = 'to_learn', removed_at = NULL, removal_reason = NULL, updated_at = ?
+        WHERE id = ?
+    """, (now, skill_id))
+    
+    log_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO skill_activity_log (id, user_id, skill_id, skill_name, action, details, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (log_id, user_id, skill_id, current["skill_name"], "restored", "Restored to active tracking", now))
+    
+    conn.commit()
+    cursor.execute("SELECT * FROM tracked_skills WHERE id = ?", (skill_id,))
+    restored = dict(cursor.fetchone())
+    conn.close()
+    return restored
+
+@app.get("/api/tracker/history")
+def get_tracker_history(user_id: str, limit: int = 50):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM skill_activity_log 
+        WHERE user_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT ?
+    """, (user_id, limit))
+    history = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("""
+        SELECT * FROM tracked_skills 
+        WHERE user_id = ? AND status = 'removed' 
+        ORDER BY removed_at DESC
+    """, (user_id,))
+    removed_skills = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"history": history, "removed_skills": removed_skills}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
