@@ -54,13 +54,46 @@ export const generateCoverLetter = async (jobRole: string, companyName: string, 
   return response.json();
 };
 
-export const generateMockInterview = async (jobRole: string, resumeText: string) => {
-  const response = await fetch(`${API_URL}/api/tools/mock-interview`, {
+// The interactive interview flow (generate -> answer -> evaluate -> finalize) is
+// implemented as Next.js API routes on the web app, not on the FastAPI backend -
+// calling them directly here reuses that logic instead of duplicating it.
+const WEB_APP_URL = "https://resume-pro-rouge.vercel.app";
+
+export type InterviewQuestion = { id?: number; question: string; difficulty: string; focus: string };
+
+export const generateInteractiveInterview = async (jobRole: string, jobDescription: string, resumeText: string) => {
+  const response = await fetch(`${WEB_APP_URL}/api/mock-interview/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ job_role: jobRole, resume_text: resumeText }),
+    body: JSON.stringify({ jobRole, jobDescription, resumeText }),
   });
-  if (!response.ok) throw new Error("Mock interview request failed");
+  if (!response.ok) throw new Error("Failed to generate interview questions");
+  return response.json();
+};
+
+export const evaluateInterviewAnswer = async (
+  question: InterviewQuestion,
+  userAnswer: string,
+  jobRole: string,
+  jobDescription: string,
+  resumeText: string
+) => {
+  const response = await fetch(`${WEB_APP_URL}/api/mock-interview/evaluate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, userAnswer, jobRole, jobDescription, resumeText }),
+  });
+  if (!response.ok) throw new Error("Failed to evaluate your answer");
+  return response.json();
+};
+
+export const finalizeInterview = async (allQnA: { question: InterviewQuestion; answer: string; feedback?: string }[], jobRole: string) => {
+  const response = await fetch(`${WEB_APP_URL}/api/mock-interview/finalize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ allQnA, jobRole }),
+  });
+  if (!response.ok) throw new Error("Failed to compile the final report");
   return response.json();
 };
 

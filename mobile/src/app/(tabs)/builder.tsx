@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Clipboard } from 'react-native';
-import { FileText, Copy, Plus, Trash2 } from 'lucide-react-native';
+import { Copy, Plus, Trash2 } from 'lucide-react-native';
+import { BuilderIcon } from '../../components/brand-icons';
 import { buildResume } from '../../services/api';
 
 type Education = { degree: string; university: string; year: string };
@@ -89,7 +90,7 @@ export default function BuilderScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.iconBox}>
-          <FileText color="#fff" size={28} />
+          <BuilderIcon size={28} />
         </View>
         <Text style={styles.title}>Smart Resume Builder</Text>
         <Text style={styles.subtitle}>Build a stunning, ATS-friendly resume from scratch.</Text>
@@ -223,35 +224,35 @@ export default function BuilderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E5DFD3' },
+  container: { flex: 1, backgroundColor: '#fafafa' },
   content: { padding: 24, paddingBottom: 60 },
   header: { alignItems: 'center', marginBottom: 24 },
   iconBox: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: '900', color: '#09090b', marginBottom: 8 },
+  title: { fontSize: 28, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#09090b', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#71717a', textAlign: 'center' },
-  inputCard: { backgroundColor: '#F4F1EA', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#D1C9B9', marginBottom: 16 },
+  inputCard: { backgroundColor: '#ffffff', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#e4e4e7', marginBottom: 16 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  sectionLabel: { fontSize: 18, fontWeight: '700', color: '#09090b', marginBottom: 8 },
-  entryBlock: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#D1C9B9' },
+  sectionLabel: { fontSize: 18, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b', marginBottom: 8 },
+  entryBlock: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#e4e4e7' },
   removeBtn: { alignSelf: 'flex-end', padding: 4 },
-  label: { fontSize: 14, fontWeight: '700', color: '#09090b', marginBottom: 8 },
+  label: { fontSize: 14, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b', marginBottom: 8 },
   input: { backgroundColor: '#fff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 16, fontSize: 16 },
   textArea: { minHeight: 90, textAlignVertical: 'top' },
   button: { backgroundColor: '#a855f7', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  buttonText: { color: '#fff', fontFamily: 'Geist_700Bold', fontWeight: '700', fontSize: 16 },
   resultContainer: { marginTop: 8 },
   resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  resultTitle: { fontSize: 20, fontWeight: '700', color: '#09090b' },
+  resultTitle: { fontSize: 20, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b' },
   copyBtn: { padding: 8, backgroundColor: '#e5e7eb', borderRadius: 8 },
-  resultCard: { backgroundColor: '#fff', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: '#D1C9B9' },
-  resultName: { fontSize: 22, fontWeight: '900', color: '#09090b' },
+  resultCard: { backgroundColor: '#fff', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: '#e4e4e7' },
+  resultName: { fontSize: 22, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#09090b' },
   resultContact: { fontSize: 14, color: '#71717a', marginBottom: 12 },
   resultSummary: { fontSize: 15, color: '#1f2937', lineHeight: 22, marginBottom: 16 },
   resultBlock: { marginBottom: 16 },
-  resultJobTitle: { fontSize: 16, fontWeight: '700', color: '#09090b' },
+  resultJobTitle: { fontSize: 16, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b' },
   resultDate: { fontSize: 13, color: '#71717a', marginBottom: 6 },
   bullet: { fontSize: 14, color: '#1f2937', lineHeight: 20, marginLeft: 4 },
   skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   skillChip: { backgroundColor: '#f3e8ff', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 },
-  skillChipText: { fontSize: 13, fontWeight: '600', color: '#7e22ce' },
+  skillChipText: { fontSize: 13, fontFamily: 'Geist_600SemiBold', fontWeight: '600', color: '#7e22ce' },
 });

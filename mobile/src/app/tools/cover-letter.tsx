@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Clipboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Layout, Copy } from 'lucide-react-native';
+import { Copy } from 'lucide-react-native';
+import { CoverLetterIcon } from '../../components/brand-icons';
 import { generateCoverLetter } from '../../services/api';
 
 export default function CoverLetterScreen() {
@@ -54,7 +55,7 @@ export default function CoverLetterScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.iconBox}>
-          <Layout color="#fff" size={28} />
+          <CoverLetterIcon size={28} />
         </View>
         <Text style={styles.title}>Cover Letter Gen</Text>
         <Text style={styles.subtitle}>Instantly generate highly targeted cover letters customized for specific jobs.</Text>
@@ -98,22 +99,22 @@ export default function CoverLetterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E5DFD3' },
+  container: { flex: 1, backgroundColor: '#fafafa' },
   content: { padding: 24, paddingBottom: 60 },
   header: { alignItems: 'center', marginBottom: 24 },
   iconBox: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#3b82f6', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: '900', color: '#09090b', marginBottom: 8 },
+  title: { fontSize: 28, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#09090b', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#71717a', textAlign: 'center' },
-  inputCard: { backgroundColor: '#F4F1EA', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#D1C9B9', marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '700', color: '#09090b', marginBottom: 8 },
+  inputCard: { backgroundColor: '#ffffff', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#e4e4e7', marginBottom: 24 },
+  label: { fontSize: 14, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b', marginBottom: 8 },
   input: { backgroundColor: '#fff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 16, fontSize: 16 },
   button: { backgroundColor: '#3b82f6', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  buttonText: { color: '#fff', fontFamily: 'Geist_700Bold', fontWeight: '700', fontSize: 16 },
   resultContainer: { marginTop: 8 },
   resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 20, fontWeight: '700', color: '#09090b' },
+  sectionTitle: { fontSize: 20, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b' },
   copyBtn: { padding: 8, backgroundColor: '#e5e7eb', borderRadius: 8 },
-  letterCard: { backgroundColor: '#fff', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: '#D1C9B9' },
+  letterCard: { backgroundColor: '#fff', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: '#e4e4e7' },
   letterText: { fontSize: 16, color: '#1f2937', lineHeight: 26 },
 });
 

@@ -1,18 +1,21 @@
 import { Tabs } from 'expo-router';
 import { Home, Sparkles, Wrench } from 'lucide-react-native';
+import { Colors } from '../../constants/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#F4F1EA' },
-        headerTintColor: '#000000',
-        tabBarActiveTintColor: '#4f46e5',
-        tabBarInactiveTintColor: '#71717a',
+        headerStyle: { backgroundColor: Colors.background },
+        headerTintColor: Colors.foreground,
+        headerTitleStyle: { fontFamily: 'Geist_700Bold' },
+        tabBarActiveTintColor: Colors.indigo,
+        tabBarInactiveTintColor: Colors.mutedForeground,
+        tabBarLabelStyle: { fontFamily: 'Geist_600SemiBold', fontSize: 11 },
         tabBarStyle: {
-          backgroundColor: '#F4F1EA',
+          backgroundColor: Colors.card,
           borderTopWidth: 1,
-          borderTopColor: '#D1C9B9',
+          borderTopColor: Colors.border,
           paddingBottom: 4,
         },
       }}

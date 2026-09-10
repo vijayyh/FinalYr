@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GitFork, Map, Navigation, CheckCircle2 } from 'lucide-react-native';
+import { Map, Navigation } from 'lucide-react-native';
+import { SkillGapIcon } from '../../components/brand-icons';
 import { analyzeSkillGap } from '../../services/api';
 
 export default function SkillGapScreen() {
@@ -42,7 +43,7 @@ export default function SkillGapScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.iconBox}>
-          <GitFork color="#fff" size={28} />
+          <SkillGapIcon size={28} />
         </View>
         <Text style={styles.title}>Skill Gap Analyzer</Text>
         <Text style={styles.subtitle}>Map prerequisite skills and dynamic roadmap pathways against your target job.</Text>
@@ -105,28 +106,28 @@ export default function SkillGapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#E5DFD3' },
+  container: { flex: 1, backgroundColor: '#fafafa' },
   content: { padding: 24, paddingBottom: 60 },
   header: { alignItems: 'center', marginBottom: 24 },
   iconBox: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#f97316', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: '900', color: '#09090b', marginBottom: 8 },
+  title: { fontSize: 28, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#09090b', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#71717a', textAlign: 'center' },
-  inputCard: { backgroundColor: '#F4F1EA', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#D1C9B9', marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '700', color: '#09090b', marginBottom: 8 },
+  inputCard: { backgroundColor: '#ffffff', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#e4e4e7', marginBottom: 24 },
+  label: { fontSize: 14, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b', marginBottom: 8 },
   textArea: { backgroundColor: '#fff', borderRadius: 12, padding: 16, height: 160, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 16, fontSize: 16 },
   button: { backgroundColor: '#f97316', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  buttonText: { color: '#fff', fontFamily: 'Geist_700Bold', fontWeight: '700', fontSize: 16 },
   resultContainer: { marginTop: 8 },
   scoreCard: { backgroundColor: '#fff', padding: 24, borderRadius: 24, alignItems: 'center', borderWidth: 2, borderColor: '#f97316', marginBottom: 16 },
-  scoreLabel: { fontSize: 12, fontWeight: '700', color: '#71717a', letterSpacing: 1, marginBottom: 8 },
-  scoreValue: { fontSize: 48, fontWeight: '900', color: '#ea580c' },
-  detailsCard: { backgroundColor: '#F4F1EA', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#D1C9B9', marginBottom: 16 },
-  detailsTitle: { fontSize: 18, fontWeight: '700', color: '#09090b', marginBottom: 16 },
+  scoreLabel: { fontSize: 12, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#71717a', letterSpacing: 1, marginBottom: 8 },
+  scoreValue: { fontSize: 48, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#ea580c' },
+  detailsCard: { backgroundColor: '#ffffff', padding: 24, borderRadius: 24, borderWidth: 1, borderColor: '#e4e4e7', marginBottom: 16 },
+  detailsTitle: { fontSize: 18, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b', marginBottom: 16 },
   listItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   listText: { fontSize: 16, color: '#44403c' },
   emptyText: { color: '#78716c', fontStyle: 'italic' },
   roadmapItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
-  roadmapSkill: { fontSize: 16, fontWeight: '700', color: '#000', marginBottom: 4 },
+  roadmapSkill: { fontSize: 16, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#000', marginBottom: 4 },
   roadmapPath: { fontSize: 14, color: '#57534e', fontStyle: 'italic' },
 });
 

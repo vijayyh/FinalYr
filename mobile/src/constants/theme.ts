@@ -1,65 +1,38 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
+// Design tokens mirrored 1:1 from frontend/src/app/globals.css so the mobile app
+// matches the web app's light theme exactly (same background/foreground/accent values).
 
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+  background: '#fafafa',
+  foreground: '#09090b',
+  card: '#ffffff',
+  cardTranslucent: 'rgba(255,255,255,0.7)',
+  cardForeground: '#09090b',
+  border: '#e4e4e7',
+  muted: '#f4f4f5',
+  mutedForeground: '#71717a',
+  accent: '#18181b',
+  accentForeground: '#fafafa',
+  indigo: '#4f46e5',
+  purpleGradientEnd: '#7c3aed',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+// Per-tool accent colors, matching the icon-box background colors on the web home page.
+export const ToolColors = {
+  ats: '#f97316',
+  coverLetter: '#3b82f6',
+  linkedin: '#0ea5e9',
+  builder: '#a855f7',
+  skillGap: '#f97316',
+  mockInterview: '#22c55e',
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+// Geist font family names, as registered by useFonts() in app/_layout.tsx.
+export const Fonts = {
+  regular: 'Geist_400Regular',
+  medium: 'Geist_500Medium',
+  semiBold: 'Geist_600SemiBold',
+  bold: 'Geist_700Bold',
+  extraBold: 'Geist_800ExtraBold',
+  black: 'Geist_900Black',
+  mono: 'GeistMono_500Medium',
+} as const;

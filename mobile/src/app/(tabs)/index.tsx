@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Animated, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UploadCloud, FileText, ArrowRight, Sparkles, Target, Zap, Layout, GitFork } from 'lucide-react-native';
+import { UploadCloud, FileText, ArrowRight, Sparkles } from 'lucide-react-native';
 import { uploadResume } from '../../services/api';
 import { FeatureCard } from '../../components/feature-card';
+import { AtsIcon, CoverLetterIcon, LinkedInIcon, BuilderIcon, SkillGapIcon, MockInterviewIcon } from '../../components/brand-icons';
 
 const ADVICE = [
   "Keep it under 2 pages!",
@@ -22,7 +23,7 @@ export default function HomeScreen() {
   const [adviceIndex, setAdviceIndex] = useState(0);
   
   const [showSplash, setShowSplash] = useState(true);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(1));
 
   useEffect(() => {
     const splashTimer = setTimeout(() => {
@@ -36,12 +37,12 @@ export default function HomeScreen() {
     const interval = setInterval(() => {
       setAdviceIndex((prev) => (prev + 1) % ADVICE.length);
     }, 5000);
-    
+
     return () => {
       clearInterval(interval);
       clearTimeout(splashTimer);
     };
-  }, []);
+  }, [fadeAnim]);
 
   const pickDocument = async () => {
     try {
@@ -110,9 +111,17 @@ export default function HomeScreen() {
         <View style={styles.heroSection}>
           <Text style={styles.title}>Let your AI career companion get started.</Text>
           <Text style={styles.subtitle}>Upload your resume and tell ResumePro what you want to achieve.</Text>
-          
-          <View style={styles.adviceCard}>
-            <Text style={styles.adviceText}>"{ADVICE[adviceIndex]}"</Text>
+
+          {/* Mascot + speech bubble banner - kept compact and above the fold */}
+          <View style={styles.mascotBanner}>
+            <Image
+              source={require('../../../assets/images/rabbit_resume.png')}
+              style={styles.mascotImage}
+              resizeMode="contain"
+            />
+            <View style={styles.adviceBubble}>
+              <Text style={styles.adviceText}>&quot;{ADVICE[adviceIndex]}&quot;</Text>
+            </View>
           </View>
 
           <View style={styles.uploadCard}>
@@ -161,60 +170,51 @@ export default function HomeScreen() {
               <Text style={styles.builderBtnText}>Build from Scratch</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Rabbit Image */}
-          <View style={styles.imageContainer}>
-            <Image 
-              source={require('../../../assets/images/rabbit_resume.png')} 
-              style={styles.mascotImage} 
-              resizeMode="contain"
-            />
-          </View>
         </View>
 
         <View style={styles.featuresSection}>
           <Text style={styles.featuresTitle}>Elevate your job search</Text>
           
-          <FeatureCard 
-            icon={<Target color="#fff" size={24} />} 
-            title="ATS Optimization" 
+          <FeatureCard
+            icon={<AtsIcon size={24} />}
+            title="ATS Optimization"
             desc="Beat the automated resume screeners."
             color="#f97316"
             onPress={() => router.push('/tools/ats-score')}
           />
-          <FeatureCard 
-            icon={<Layout color="#fff" size={24} />} 
-            title="Cover Letter Gen" 
+          <FeatureCard
+            icon={<CoverLetterIcon size={24} />}
+            title="Cover Letter Gen"
             desc="Instantly generate highly targeted cover letters."
             color="#3b82f6"
             onPress={() => router.push('/tools/cover-letter')}
           />
-          <FeatureCard 
-            icon={<Sparkles color="#fff" size={24} />} 
-            title="LinkedIn Optimizer" 
+          <FeatureCard
+            icon={<LinkedInIcon size={24} />}
+            title="LinkedIn Optimizer"
             desc="Transform your LinkedIn profile into a recruiter magnet."
-            color="#0ea5e9"
+            color="#0A66C2"
             onPress={() => router.push('/tools/linkedin-optimizer')}
           />
-          <FeatureCard 
-            icon={<FileText color="#fff" size={24} />} 
-            title="Smart Resume Builder" 
+          <FeatureCard
+            icon={<BuilderIcon size={24} />}
+            title="Smart Resume Builder"
             desc="Build a stunning, ATS-friendly resume from scratch."
             color="#a855f7"
             onPress={() => router.push('/builder')}
           />
-          <FeatureCard 
-            icon={<GitFork color="#fff" size={24} />} 
-            title="Skill Gap Analyzer" 
+          <FeatureCard
+            icon={<SkillGapIcon size={24} />}
+            title="Skill Gap Analyzer"
             desc="Map prerequisite skills and dynamic roadmap pathways."
             color="#f97316"
             onPress={() => router.push('/tools/skill-gap')}
           />
-          <FeatureCard 
-            icon={<Zap color="#16a34a" size={24} />} 
-            title="Interactive Mock Interviews" 
+          <FeatureCard
+            icon={<MockInterviewIcon size={24} />}
+            title="Interactive Mock Interviews"
             desc="Practice technical and behavioral interviews."
-            color="#bbf7d0"
+            color="#22c55e"
             titleColor="#16a34a"
             onPress={() => router.push('/tools/mock-interview')}
             outline
@@ -222,11 +222,11 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Splash Screen Overlay */}
+      {/* Splash Screen Overlay - matches the native splash (app.json) for a seamless handoff */}
       {showSplash && (
         <Animated.View style={[styles.splashScreen, { opacity: fadeAnim }]}>
           <View style={styles.splashIconBox}>
-            <FileText color="#000" size={48} />
+            <FileText color="#fafafa" size={48} />
           </View>
           <Text style={styles.splashTitle}>ResumePro</Text>
         </Animated.View>
@@ -236,40 +236,40 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  flexContainer: { flex: 1, backgroundColor: '#E5DFD3' },
-  container: { flex: 1, backgroundColor: '#E5DFD3' },
+  flexContainer: { flex: 1, backgroundColor: '#fafafa' },
+  container: { flex: 1, backgroundColor: '#fafafa' },
   content: { padding: 24, paddingBottom: 60 },
   heroSection: { marginBottom: 20 },
-  title: { fontSize: 36, fontWeight: '900', color: '#09090b', marginBottom: 12 },
-  subtitle: { fontSize: 16, color: '#71717a', marginBottom: 24 },
-  adviceCard: { backgroundColor: '#F4F1EA', padding: 16, borderRadius: 16, marginBottom: 24, borderWidth: 1, borderColor: '#D1C9B9' },
-  adviceText: { fontSize: 14, fontWeight: '700', color: '#09090b' },
+  title: { fontSize: 32, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#09090b', marginBottom: 10, lineHeight: 38 },
+  subtitle: { fontSize: 15, color: '#71717a', marginBottom: 16 },
+  mascotBanner: { width: '100%', height: 150, marginBottom: 16, borderRadius: 28, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e4e4e7' },
+  adviceBubble: { position: 'absolute', top: 12, left: 12, backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#e4e4e7', borderBottomLeftRadius: 4, borderRadius: 18, paddingVertical: 8, paddingHorizontal: 14, maxWidth: 190, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
+  adviceText: { fontSize: 12, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#09090b' },
   uploadCard: { backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(229, 231, 235, 0.5)' },
   browseButton: { flexDirection: 'row', alignItems: 'center', minHeight: 60, paddingHorizontal: 16 },
   browseButtonText: { color: '#71717a', fontSize: 16, marginLeft: 12 },
   fileSelectedRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   fileIconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e5e7eb' },
   fileDetails: { flex: 1, marginLeft: 12 },
-  fileName: { fontSize: 16, fontWeight: '700', color: '#000' },
-  fileStatus: { fontSize: 12, color: '#71717a', fontWeight: '500' },
+  fileName: { fontSize: 16, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#000' },
+  fileStatus: { fontSize: 12, color: '#71717a', fontFamily: 'Geist_500Medium', fontWeight: '500' },
   clearFileBtn: { padding: 8 },
   clearFileText: { fontSize: 16, color: '#71717a' },
   uploadActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 16, marginTop: 8 },
   smallBrowseBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  smallBrowseText: { fontSize: 12, fontWeight: '700', color: '#71717a', marginLeft: 8 },
+  smallBrowseText: { fontSize: 12, fontFamily: 'Geist_700Bold', fontWeight: '700', color: '#71717a', marginLeft: 8 },
   analyzeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#4f46e5', alignItems: 'center', justifyContent: 'center' },
   analyzeBtnDisabled: { backgroundColor: '#d4d4d8' },
   quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 24 },
   sampleBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#09090b', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
-  sampleBtnText: { color: '#fff', fontWeight: '700', marginLeft: 8 },
+  sampleBtnText: { color: '#fff', fontFamily: 'Geist_700Bold', fontWeight: '700', marginLeft: 8 },
   builderBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
-  builderBtnText: { color: '#18181b', fontWeight: '700', marginLeft: 8 },
-  imageContainer: { width: '100%', height: 320, marginTop: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: 32, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
-  mascotImage: { width: '100%', height: '100%', opacity: 0.95, borderRadius: 32 },
+  builderBtnText: { color: '#18181b', fontFamily: 'Geist_700Bold', fontWeight: '700', marginLeft: 8 },
+  mascotImage: { width: '100%', height: '100%' },
   featuresSection: { marginTop: 10 },
-  featuresTitle: { fontSize: 28, fontWeight: '900', color: '#09090b', marginBottom: 24, textAlign: 'center' },
+  featuresTitle: { fontSize: 28, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#09090b', marginBottom: 24, textAlign: 'center' },
   
-  splashScreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
-  splashIconBox: { width: 96, height: 96, borderRadius: 32, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  splashTitle: { fontSize: 36, fontWeight: '900', color: '#fff' },
+  splashScreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#09090b', alignItems: 'center', justifyContent: 'center', zIndex: 999 },
+  splashIconBox: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  splashTitle: { fontSize: 36, fontFamily: 'Geist_900Black', fontWeight: '900', color: '#fafafa' },
 });
