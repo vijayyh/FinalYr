@@ -405,12 +405,13 @@ Skills: {req.skills}
     try:
         response_text = call_llm(
             prompt,
+            json_object=True,
             system="You are a helpful API that outputs only valid JSON.",
             temperature=0.3,
         )
         if response_text.startswith("```json"):
             response_text = response_text.strip("`").replace("json\n", "", 1)
-        
+
         resume_data = json.loads(response_text)
         return {"status": "success", "data": resume_data}
     except Exception as e:
