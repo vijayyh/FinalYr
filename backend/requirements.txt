@@ -5,5 +5,6 @@ python-multipart
 pymupdf
 python-dotenv
 google-generativeai
+networkx
 requests
 groq
