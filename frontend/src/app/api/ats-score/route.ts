@@ -80,7 +80,7 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "openai/gpt-oss-120b",
             messages: [
               { role: "system", content: "You are an ATS parser logic analyzer. Output only JSON." },
               { role: "user", content: prompt }
@@ -97,7 +97,7 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
           console.log("Successfully generated ATS analysis using Groq!");
         } else {
           // Try 8b fallback
-          console.warn("Groq 70b failed, trying llama3-8b-8192 fallback...");
+          console.warn("Groq 70b failed, trying openai/gpt-oss-20b fallback...");
           const groqResponseFallback = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -105,7 +105,7 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "llama3-8b-8192",
+              model: "openai/gpt-oss-20b",
               messages: [
                 { role: "system", content: "You are an ATS parser logic analyzer. Output only JSON." },
                 { role: "user", content: prompt }
@@ -135,7 +135,7 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
       if (geminiKey && geminiKey.trim() !== "" && !geminiKey.includes("your_gemini_api_key_here")) {
         try {
           console.log("Attempting ATS score computation with Gemini API (Fallback)...");
-          let geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+          let geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${geminiKey}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -150,8 +150,8 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
           let data = await geminiResponse.json();
 
           if (!geminiResponse.ok || !data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
-            console.warn("Gemini 2.0 Flash failed, trying gemini-1.5-flash fallback...");
-            geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+            console.warn("Gemini 2.0 Flash failed, trying gemini-flash-lite-latest fallback...");
+            geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${geminiKey}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

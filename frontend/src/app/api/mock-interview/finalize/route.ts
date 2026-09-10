@@ -47,7 +47,7 @@ Output MUST be a valid JSON object matching this exact schema:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
           messages: [
             { role: "system", content: "You are an expert technical interviewer summarizing an interview. Output ONLY valid JSON." },
             { role: "user", content: prompt }
@@ -66,7 +66,7 @@ Output MUST be a valid JSON object matching this exact schema:
     if (!finalJSON) {
       const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
       if (geminiKey && geminiKey.trim() !== "" && !geminiKey.includes("your_gemini_api_key_here")) {
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${geminiKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

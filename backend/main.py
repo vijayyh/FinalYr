@@ -33,7 +33,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # Initialize Gemini if key is provided and not placeholder
 if GEMINI_API_KEY and GEMINI_API_KEY != "paste_your_gemini_api_key_here":
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    model = genai.GenerativeModel('gemini-3.6-flash')
 else:
     model = None
     print("WARNING: Gemini API key not found. Using mocked AI responses.")
@@ -44,6 +44,42 @@ if groq and GROQ_API_KEY and GROQ_API_KEY != "paste_your_groq_api_key_here":
 else:
     groq_client = None
     print("WARNING: Groq API key not found or library not installed. Will fallback to Gemini or mock.")
+
+GROQ_MODEL = "openai/gpt-oss-20b"
+
+def call_llm(prompt: str, json_object: bool = False, system: str = None, temperature: float = None) -> str:
+    """Provider abstraction: try Groq first, fall back to Gemini. Raises RuntimeError if both fail
+    (or neither is configured) so callers can fall back to mock data as before."""
+    errors = []
+
+    if groq_client:
+        try:
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            kwargs = {"messages": messages, "model": GROQ_MODEL}
+            if json_object:
+                kwargs["response_format"] = {"type": "json_object"}
+            if temperature is not None:
+                kwargs["temperature"] = temperature
+            response = groq_client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            errors.append(f"Groq: {e}")
+
+    if model:
+        try:
+            generation_config = {"temperature": temperature} if temperature is not None else None
+            response = model.generate_content(prompt, generation_config=generation_config)
+            text = response.text.strip()
+            if text.startswith("```"):
+                text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            return text
+        except Exception as e:
+            errors.append(f"Gemini: {e}")
+
+    raise RuntimeError(" | ".join(errors) if errors else "No LLM provider configured (missing GROQ_API_KEY/GEMINI_API_KEY)")
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     text = ""
@@ -128,18 +164,8 @@ Return ONLY a highly detailed JSON object matching this exact structure:
 Resume Text: {extracted_text[:3000]}"""
 
     try:
-        if groq_client:
-            response = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
-                response_format={"type": "json_object"}
-            )
-            clean_text = response.choices[0].message.content.strip()
-            parsed_data = json.loads(clean_text)
-        elif model:
-            response = model.generate_content(prompt)
-            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-            parsed_data = json.loads(clean_text)
+        clean_text = call_llm(prompt, json_object=True)
+        parsed_data = json.loads(clean_text)
     except Exception as e:
         print(f"LLM parsing error: {e}")
             
@@ -160,18 +186,8 @@ class ATSRequest(BaseModel):
 async def ats_score(req: ATSRequest):
     prompt = f"Compare this resume against the job description. Return ONLY valid JSON format like {{\"score\": 85, \"missingSkills\": [\"skill1\", \"skill2\"], \"strengths\": [\"str1\", \"str2\"]}}. Resume: {req.resume_text[:2000]} Job Desc: {req.job_description[:2000]}"
     try:
-        if groq_client:
-            response = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
-                response_format={"type": "json_object"}
-            )
-            clean_text = response.choices[0].message.content.strip()
-            return json.loads(clean_text)
-        elif model:
-            response = model.generate_content(prompt)
-            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-            return json.loads(clean_text)
+        clean_text = call_llm(prompt, json_object=True)
+        return json.loads(clean_text)
     except Exception as e:
         print(f"ATS LLM Error: {e}")
             
@@ -190,15 +206,8 @@ class CoverLetterRequest(BaseModel):
 async def generate_cover_letter(req: CoverLetterRequest):
     prompt = f"Write a professional cover letter for the role of {req.job_role} at {req.company_name} based on this resume summary: {req.resume_text[:2000]}"
     try:
-        if groq_client:
-            response = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant"
-            )
-            return {"letter": response.choices[0].message.content.strip()}
-        elif model:
-            response = model.generate_content(prompt)
-            return {"letter": response.text}
+        letter = call_llm(prompt)
+        return {"letter": letter}
     except Exception as e:
         print(f"Cover Letter LLM Error: {e}")
     
@@ -212,18 +221,8 @@ class MockInterviewRequest(BaseModel):
 async def generate_mock_interview(req: MockInterviewRequest):
     prompt = f"Generate 5 tough interview questions for a {req.job_role} based on this resume: {req.resume_text[:2000]}. Return ONLY a JSON object containing an array of objects under the key 'questions'. Each object must have keys 'question', 'focus', and 'difficulty'. Example: {{\"questions\": [{{\"question\": \"...\", \"focus\": \"Architecture\", \"difficulty\": \"Hard\"}}]}}"
     try:
-        if groq_client:
-            response = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
-                response_format={"type": "json_object"}
-            )
-            clean_text = response.choices[0].message.content.strip()
-            return json.loads(clean_text)
-        elif model:
-            response = model.generate_content(prompt)
-            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-            return json.loads(clean_text)
+        clean_text = call_llm(prompt, json_object=True)
+        return json.loads(clean_text)
     except Exception as e:
         print(f"Mock Interview LLM Error: {e}")
         
@@ -295,29 +294,14 @@ def extract_skills_with_ai(text: str) -> list[str]:
 Return ONLY a valid JSON array of strings, for example: ["Python", "React", "Docker", "Machine Learning"]. Do not include any explanations, introduction, or markdown backticks.
 Text: {text[:4000]}"""
     try:
-        if groq_client:
-            response = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
-            )
-            clean_text = response.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip()
-            if clean_text.startswith("["):
-                return json.loads(clean_text)
-            else:
-                start = clean_text.find("[")
-                end = clean_text.rfind("]") + 1
-                if start != -1 and end != -1:
-                    return json.loads(clean_text[start:end])
-        elif model:
-            response = model.generate_content(prompt)
-            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-            if clean_text.startswith("["):
-                return json.loads(clean_text)
-            else:
-                start = clean_text.find("[")
-                end = clean_text.rfind("]") + 1
-                if start != -1 and end != -1:
-                    return json.loads(clean_text[start:end])
+        clean_text = call_llm(prompt).removeprefix("```json").removesuffix("```").strip()
+        if clean_text.startswith("["):
+            return json.loads(clean_text)
+        else:
+            start = clean_text.find("[")
+            end = clean_text.rfind("]") + 1
+            if start != -1 and end != -1:
+                return json.loads(clean_text[start:end])
     except Exception as e:
         print(f"Error extracting skills: {e}")
     
@@ -382,9 +366,6 @@ class ResumeBuilderRequest(BaseModel):
 
 @app.post("/api/build-resume")
 async def build_resume(req: ResumeBuilderRequest):
-    if not groq_client:
-        raise HTTPException(status_code=500, detail="Groq client is not initialized. Please check your .env GROQ_API_KEY")
-
     prompt = f"""
 You are an expert resume writer. The user has provided their raw resume details.
 Your task is to:
@@ -422,15 +403,11 @@ Experience: {[e.model_dump() for e in req.experience]}
 Skills: {req.skills}
 """
     try:
-        completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "You are a helpful API that outputs only valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            model="llama-3.1-8b-instant",
+        response_text = call_llm(
+            prompt,
+            system="You are a helpful API that outputs only valid JSON.",
             temperature=0.3,
         )
-        response_text = completion.choices[0].message.content.strip()
         if response_text.startswith("```json"):
             response_text = response_text.strip("`").replace("json\n", "", 1)
         
@@ -537,18 +514,8 @@ Return ONLY a valid JSON object matching this exact structure:
 Resume Text: {req.resume_text[:3000]}"""
 
     try:
-        if groq_client:
-            response = groq_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
-                response_format={"type": "json_object"}
-            )
-            clean_text = response.choices[0].message.content.strip()
-            return json.loads(clean_text)
-        elif model:
-            response = model.generate_content(prompt)
-            clean_text = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-            return json.loads(clean_text)
+        clean_text = call_llm(prompt, json_object=True)
+        return json.loads(clean_text)
     except Exception as e:
         print(f"LinkedIn Optimizer LLM Error: {e}")
     
