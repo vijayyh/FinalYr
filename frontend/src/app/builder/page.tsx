@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { recordActivity } from "@/lib/activity";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Loader2, Plus, Trash2, CheckCircle2, Download } from "lucide-react";
 
@@ -93,6 +94,7 @@ export default function BuilderPage() {
       const data = await response.json();
       if (data.status === "success") {
         setGeneratedResume(data.data);
+        recordActivity({ type: "resume", title: `Resume built · ${formData.personal?.name || "Untitled"}` });
         setStep(4); // Move to preview
       } else {
         alert("Failed to generate resume. Please try again.");

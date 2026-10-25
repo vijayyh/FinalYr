@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { recordActivity } from "@/lib/activity";
 import { 
   Briefcase, 
   Sparkles, 
@@ -56,6 +57,7 @@ export default function LinkedInOptimizerPage() {
       
       if (res.ok) {
         setResults(data);
+        recordActivity({ type: "linkedin", title: "LinkedIn profile optimized" });
       } else {
         throw new Error(data.detail || "Failed to generate LinkedIn suggestions.");
       }

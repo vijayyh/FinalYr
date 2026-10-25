@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { recordActivity } from "@/lib/activity";
 import { 
   UploadCloud, 
   CheckCircle, 
@@ -167,6 +168,8 @@ export default function ATSScorePage() {
       }
       
       setResult(data);
+      const jdTitle = jobDescription.trim().split("\n")[0].slice(0, 60);
+      recordActivity({ type: "ats", title: jdTitle ? `ATS check · ${jdTitle}` : "ATS check", score: data.overallScore });
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to calculate ATS score.");

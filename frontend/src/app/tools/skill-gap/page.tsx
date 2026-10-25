@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { recordActivity } from "@/lib/activity";
 import Link from "next/link";
 import { 
   UploadCloud, 
@@ -253,6 +254,12 @@ export default function SkillGapPage() {
       }
 
       setResult(data);
+      const total = (data.matched_skills?.length ?? 0) + (data.missing_skills?.length ?? 0);
+      recordActivity({
+        type: "skill-gap",
+        title: `Skill gap · ${data.missing_skills?.length ?? 0} skills to learn`,
+        score: total ? ((data.matched_skills?.length ?? 0) / total) * 100 : undefined,
+      });
       setTimeout(() => {
         document.getElementById("results-dashboard")?.scrollIntoView({ behavior: "smooth" });
       }, 100);
