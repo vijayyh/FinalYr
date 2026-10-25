@@ -37,7 +37,7 @@ ${String(jobDescription).slice(0, 8000) || "Not provided (optimize for standard 
       const { text } = await callLLM(systemPrompt, {
         system: "You are a professional cover letter helper.",
         temperature: 0.4,
-        maxTokens: 1500,
+        maxTokens: 4000, // medium reasoning tokens count against this budget
         reasoningEffort: "medium",
       });
       const letter = text.replace(/^```\w*\s*/, "").replace(/\s*```$/, "").trim();

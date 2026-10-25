@@ -52,8 +52,11 @@ async function callGroq(model: string, key: string, prompt: string, opts: LLMOpt
     },
     opts.timeoutMs ?? 25000
   );
-  const text = data?.choices?.[0]?.message?.content?.trim();
-  if (!ok || !text) throw new Error(data?.error?.message || "empty response");
+  const choice = data?.choices?.[0];
+  const text = choice?.message?.content?.trim();
+  if (!ok) throw new Error(data?.error?.message || `HTTP error`);
+  if (!text) throw new Error(choice?.finish_reason === "length" ? "token budget used up by reasoning" : "empty response");
+  if (choice?.finish_reason === "length" && !opts.json) throw new Error("response truncated");
   return text;
 }
 
