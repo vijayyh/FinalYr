@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callLLMJSON } from "@/lib/llm";
 
 export const maxDuration = 60;
 
@@ -11,8 +12,8 @@ export async function POST(request: Request) {
     }
 
     const qnaText = allQnA.map((item: any, index: number) => `
-Q${index + 1} (${item.question.difficulty} - ${item.question.focus}): ${item.question.question}
-Candidate's Answer: ${item.answer}
+Q${index + 1} (${item.question?.difficulty ?? "?"} - ${item.question?.focus ?? "?"}): ${item.question?.question ?? item.question}
+Candidate's Answer: ${String(item.answer ?? "").slice(0, 3000)}
 `).join("\n");
 
     const prompt = `Act as an expert technical recruiter and hiring manager. Review the following transcript of a mock interview for the role of "${jobRole}".
@@ -36,78 +37,33 @@ Output MUST be a valid JSON object matching this exact schema:
 }
 `;
 
-    let finalJSON = "";
-    const groqKey = process.env.GROQ_API_KEY;
-
-    if (groqKey && groqKey.trim() !== "" && !groqKey.includes("your_groq_api_key_here")) {
-      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${groqKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-            reasoning_effort: "low",
-          messages: [
-            { role: "system", content: "You are an expert technical interviewer summarizing an interview. Output ONLY valid JSON." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.4,
-          response_format: { type: "json_object" },
-        }),
+    try {
+      const parsed = await callLLMJSON<{ score?: unknown; advice?: unknown; summary?: unknown }>(prompt, {
+        system: "You are an expert technical interviewer summarizing an interview. Output ONLY valid JSON.",
+        temperature: 0.4,
+        maxTokens: 1500,
       });
-
-      const data = await groqResponse.json();
-      if (groqResponse.ok && data.choices && data.choices[0]?.message?.content) {
-        finalJSON = data.choices[0].message.content.trim();
-      }
+      const score = Math.max(0, Math.min(10, Math.round(Number(parsed.score))));
+      if (!Number.isFinite(score)) throw new Error("Invalid score");
+      const advice = Array.isArray(parsed.advice) ? parsed.advice.filter((a): a is string => typeof a === "string") : [];
+      return NextResponse.json({
+        score,
+        advice,
+        summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      });
+    } catch (err: any) {
+      console.warn("Interview summary failed:", err.message);
+      return NextResponse.json({
+        score: Math.min(10, allQnA.length),
+        advice: [
+          "Use the STAR method (Situation, Task, Action, Result) for behavioral questions.",
+          "Back up technical answers with specifics from your own projects.",
+          "Quantify results wherever you can (time saved, users, performance gains).",
+        ],
+        summary: "The AI reviewer was unavailable, so this is a general summary. Your score reflects how many questions you completed.",
+        fallback: true,
+      });
     }
-
-    if (!finalJSON) {
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-      if (geminiKey && geminiKey.trim() !== "" && !geminiKey.includes("your_gemini_api_key_here")) {
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${geminiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.4, thinkingConfig: { thinkingLevel: "minimal" } }
-          }),
-        });
-
-        const data = await geminiResponse.json();
-        if (geminiResponse.ok && data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-          finalJSON = data.candidates[0].content.parts[0].text.trim();
-        }
-      }
-    }
-
-    if (finalJSON) {
-      const cleanJSONString = finalJSON
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/, "")
-        .replace(/\s*```$/, "")
-        .trim();
-        
-      try {
-        const parsed = JSON.parse(cleanJSONString);
-        return NextResponse.json(parsed);
-      } catch (parseError) {
-        console.error("Failed to parse LLM response as JSON:", cleanJSONString);
-        return NextResponse.json({ error: "Failed to parse final overview" }, { status: 500 });
-      }
-    }
-
-    return NextResponse.json({
-      score: 7,
-      advice: [
-        "Be sure to use the STAR method when answering behavioral questions.",
-        "Your technical answers were good, but could include more metrics.",
-        "Try to be more concise in your explanations."
-      ],
-      summary: "This is a mocked final summary since API keys are missing on Vercel. Overall, you did a decent job answering the mocked questions!"
-    });
   } catch (err: any) {
     console.error("Finalize interview error:", err);
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
