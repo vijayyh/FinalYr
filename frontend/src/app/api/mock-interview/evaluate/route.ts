@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { callLLMJSON } from "@/lib/llm";
 
 export const maxDuration = 60;
 
@@ -10,17 +11,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing question or userAnswer" }, { status: 400 });
     }
 
+    const questionText = typeof question === "string" ? question : question.question;
+
     const prompt = `Act as an expert technical recruiter and hiring manager interviewing a candidate for the role of "${jobRole}".
 You asked the candidate the following question:
-"${question.question}"
+"${questionText}"
 
 The candidate provided the following answer:
-"${userAnswer}"
+"${String(userAnswer).slice(0, 6000)}"
 
 Candidate's Resume Context (use this to evaluate if they accurately referenced their experience):
-${resumeText}
-
-Evaluate the candidate's answer. 
+${String(resumeText || "").slice(0, 10000)}
+${jobDescription ? `\nJob Description:\n${String(jobDescription).slice(0, 6000)}\n` : ""}
+Evaluate the candidate's answer.
 - Provide conversational, direct feedback addressing the candidate as "you".
 - Format your feedback clearly, using bullet points for readability.
 - Use emojis sparingly and only when necessary (e.g., one or two for praise or constructive feedback). Do not overuse them.
@@ -35,72 +38,22 @@ Output MUST be a valid JSON object matching this exact schema:
 }
 `;
 
-    let evaluationJSON = "";
-    const groqKey = process.env.GROQ_API_KEY;
-
-    if (groqKey && groqKey.trim() !== "" && !groqKey.includes("your_groq_api_key_here")) {
-      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${groqKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          messages: [
-            { role: "system", content: "You are an expert technical interviewer providing feedback. Output ONLY valid JSON." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.5,
-          response_format: { type: "json_object" },
-        }),
+    try {
+      const parsed = await callLLMJSON<{ feedback?: unknown; terminate?: unknown }>(prompt, {
+        system: "You are an expert technical interviewer providing feedback. Output ONLY valid JSON.",
+        temperature: 0.5,
+        maxTokens: 1500,
       });
-
-      const data = await groqResponse.json();
-      if (groqResponse.ok && data.choices && data.choices[0]?.message?.content) {
-        evaluationJSON = data.choices[0].message.content.trim();
-      }
+      if (typeof parsed.feedback !== "string" || !parsed.feedback.trim()) throw new Error("No feedback in response");
+      return NextResponse.json({ feedback: parsed.feedback.trim(), terminate: parsed.terminate === true });
+    } catch (err: any) {
+      console.warn("Answer evaluation failed:", err.message);
+      return NextResponse.json({
+        feedback: "I couldn't reach the AI evaluator just now, so here's general guidance:\n- Structure your answer with the STAR method (Situation, Task, Action, Result).\n- Reference a concrete project from your resume.\n- Close with a measurable result where you can.",
+        terminate: false,
+        fallback: true,
+      });
     }
-
-    if (!evaluationJSON) {
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-      if (geminiKey && geminiKey.trim() !== "" && !geminiKey.includes("your_gemini_api_key_here")) {
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${geminiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.5 }
-          }),
-        });
-
-        const data = await geminiResponse.json();
-        if (geminiResponse.ok && data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-          evaluationJSON = data.candidates[0].content.parts[0].text.trim();
-        }
-      }
-    }
-
-    if (evaluationJSON) {
-      const cleanJSONString = evaluationJSON
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/, "")
-        .replace(/\s*```$/, "")
-        .trim();
-        
-      try {
-        const parsed = JSON.parse(cleanJSONString);
-        return NextResponse.json(parsed);
-      } catch (parseError) {
-        console.error("Failed to parse LLM response as JSON:", cleanJSONString);
-        return NextResponse.json({ error: "Failed to parse feedback" }, { status: 500 });
-      }
-    }
-
-    return NextResponse.json({
-      feedback: "This is a mocked evaluation since API keys are missing on the Vercel deployment. Good job trying to answer the question, but remember to use the STAR method to structure your response next time!",
-      terminate: false
-    });
   } catch (err: any) {
     console.error("Evaluate answer error:", err);
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });

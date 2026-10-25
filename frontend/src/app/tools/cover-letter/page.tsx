@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { recordActivity } from "@/lib/activity";
 import { 
   FileText, 
   Sparkles, 
@@ -155,6 +156,7 @@ export default function CoverLetterPage() {
 
       if (data.letter) {
         setLetter(data.letter);
+        recordActivity({ type: "cover-letter", title: `Cover letter · ${jobRole} at ${companyName}` });
       } else {
         throw new Error("No letter content returned from API.");
       }

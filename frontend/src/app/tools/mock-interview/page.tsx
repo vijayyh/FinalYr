@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { recordActivity } from "@/lib/activity";
 import { Mic, Briefcase, Video, AlertCircle, ArrowRight, CheckCircle2, Play, CornerDownLeft, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -148,6 +149,9 @@ export default function MockInterviewPage() {
       if (data.score !== undefined || data.rating) {
         setFinalReview(data);
         setStatus('finished');
+        if (typeof data.score === "number") {
+          recordActivity({ type: "interview", title: `Mock interview · ${jobRole}`, score: data.score * 10 });
+        }
       } else {
         throw new Error("Failed to finalize");
       }
