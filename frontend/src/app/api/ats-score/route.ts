@@ -81,6 +81,7 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
           },
           body: JSON.stringify({
             model: "openai/gpt-oss-120b",
+            reasoning_effort: "low",
             messages: [
               { role: "system", content: "You are an ATS parser logic analyzer. Output only JSON." },
               { role: "user", content: prompt }
@@ -106,6 +107,7 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
             },
             body: JSON.stringify({
               model: "openai/gpt-oss-20b",
+            reasoning_effort: "low",
               messages: [
                 { role: "system", content: "You are an ATS parser logic analyzer. Output only JSON." },
                 { role: "user", content: prompt }
@@ -142,7 +144,8 @@ ${jobDescription || "Not provided (evaluate against general industry standard re
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: {
                 temperature: 0.1,
-                maxOutputTokens: 1500
+                maxOutputTokens: 1500,
+                thinkingConfig: { thinkingLevel: "minimal" }
               }
             }),
           });

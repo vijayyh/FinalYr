@@ -48,6 +48,7 @@ Output MUST be a valid JSON object matching this exact schema:
         },
         body: JSON.stringify({
           model: "openai/gpt-oss-120b",
+            reasoning_effort: "low",
           messages: [
             { role: "system", content: "You are an expert technical interviewer summarizing an interview. Output ONLY valid JSON." },
             { role: "user", content: prompt }
@@ -71,7 +72,7 @@ Output MUST be a valid JSON object matching this exact schema:
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.4 }
+            generationConfig: { temperature: 0.4, thinkingConfig: { thinkingLevel: "minimal" } }
           }),
         });
 

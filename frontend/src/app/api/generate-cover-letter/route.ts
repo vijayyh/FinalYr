@@ -19,7 +19,7 @@ Strict Rules:
    - Paragraph 1 (Immediate Hook): State the target role, company, and top 2 relevant core skills/achievements directly from the candidate's resume (1-2 sentences max).
    - Paragraph 2 (Key Impact): Detail exactly 1 standout project or work experience directly matching the target job description, mentioning concrete tools used and quantifiable metrics/results (2-3 sentences max).
    - Paragraph 3 (Closing): A single direct closing sentence with a call to action and a request for an interview (1 sentence max).
-4. No Hallucinations: Extract ONLY facts, projects, tools, and metrics directly present in the candidate's resume. Do not invent any details.
+4. No Hallucinations: Extract ONLY facts, projects, tools, and metrics directly present in the candidate's resume. Do not invent any details. Never add a number, percentage, or metric (e.g. cost savings, uptime) that does not appear word-for-word in the resume; if no metric exists, describe the impact qualitatively.
 5. Format: Output ONLY the letter text (salutation, the three paragraphs, and closing). Do not include markdown blocks, notes, date placeholders, or meta-commentary.
 
 Candidate Resume Text:
@@ -45,11 +45,12 @@ ${jobDescription || "Not provided (optimize for standard skills required for the
           },
           body: JSON.stringify({
             model: "openai/gpt-oss-120b",
+            reasoning_effort: "medium",
             messages: [
               { role: "system", content: "You are a professional cover letter helper." },
               { role: "user", content: systemPrompt }
             ],
-            temperature: 0.7,
+            temperature: 0.4,
             max_tokens: 1500,
           }),
         });
@@ -70,11 +71,12 @@ ${jobDescription || "Not provided (optimize for standard skills required for the
             },
             body: JSON.stringify({
               model: "openai/gpt-oss-20b",
+            reasoning_effort: "medium",
               messages: [
                 { role: "system", content: "You are a professional cover letter helper." },
                 { role: "user", content: systemPrompt }
               ],
-              temperature: 0.7,
+              temperature: 0.4,
               max_tokens: 1500,
             }),
           });
@@ -109,8 +111,9 @@ ${jobDescription || "Not provided (optimize for standard skills required for the
             body: JSON.stringify({
               contents: [{ parts: [{ text: systemPrompt }] }],
               generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 1500
+                temperature: 0.4,
+                maxOutputTokens: 1500,
+                thinkingConfig: { thinkingLevel: "minimal" }
               }
             }),
           });

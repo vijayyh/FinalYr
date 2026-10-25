@@ -51,6 +51,7 @@ Requirements for Questions:
         },
         body: JSON.stringify({
           model: "openai/gpt-oss-120b",
+            reasoning_effort: "low",
           messages: [
             { role: "system", content: "You are an expert technical interviewer. Output ONLY valid JSON." },
             { role: "user", content: prompt }
@@ -74,7 +75,7 @@ Requirements for Questions:
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7 }
+            generationConfig: { temperature: 0.7, thinkingConfig: { thinkingLevel: "minimal" } }
           }),
         });
 

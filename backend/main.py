@@ -372,7 +372,7 @@ async def build_resume(req: ResumeBuilderRequest):
     prompt = f"""
 You are an expert resume writer. The user has provided their raw resume details.
 Your task is to:
-1. Enhance the experience bullet points using strong action verbs and quantifiable metrics where possible. Make them sound professional and impactful.
+1. Enhance the experience bullet points using strong action verbs. Make them sound professional and impactful. Keep any metrics the user provided, but never invent numbers, percentages, or results that are not in the raw data.
 2. Generate a professional summary based on the provided details.
 3. Fix any grammar and spelling issues.
 
