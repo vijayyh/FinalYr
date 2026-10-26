@@ -61,13 +61,19 @@ def call_llm(prompt: str, json_object: bool = False, system: str = None, tempera
             if system:
                 messages.append({"role": "system", "content": system})
             messages.append({"role": "user", "content": prompt})
-            kwargs = {"messages": messages, "model": GROQ_MODEL}
+            # gpt-oss is a reasoning model: reasoning tokens count against max_tokens, and at the
+            # default effort they can consume the whole budget and leave an empty answer.
+            kwargs = {"messages": messages, "model": GROQ_MODEL, "reasoning_effort": "low", "max_tokens": 4000}
             if json_object:
                 kwargs["response_format"] = {"type": "json_object"}
             if temperature is not None:
                 kwargs["temperature"] = temperature
             response = groq_client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content.strip()
+            choice = response.choices[0]
+            text = (choice.message.content or "").strip()
+            if not text or choice.finish_reason == "length":
+                raise RuntimeError(f"incomplete response (finish_reason={choice.finish_reason})")
+            return text
         except Exception as e:
             errors.append(f"Groq: {e}")
 
@@ -207,14 +213,26 @@ class CoverLetterRequest(BaseModel):
 
 @app.post("/api/tools/cover-letter")
 async def generate_cover_letter(req: CoverLetterRequest):
-    prompt = f"Write a professional cover letter for the role of {req.job_role} at {req.company_name} based on this resume summary: {req.resume_text[:2000]}"
+    # Same rules as the web app's /api/generate-cover-letter route, so mobile and web letters match.
+    prompt = f"""Draft a short, direct cover letter for a candidate applying for the role of "{req.job_role}" at "{req.company_name}". Professional tone.
+
+Strict rules:
+1. 150 to 200 words, exactly 3 short paragraphs.
+2. No filler such as "I am writing to express my interest". Start with facts.
+3. Paragraph 1: the role, the company, and the top 2 relevant skills or achievements from the resume. Paragraph 2: one standout project or experience with the tools used and its results. Paragraph 3: one closing sentence asking for an interview.
+4. Use ONLY facts, tools and metrics present in the resume. Never add a number, percentage or result that does not appear in the resume; if there is no metric, describe the impact in words.
+5. Output only the letter: salutation, three paragraphs, sign-off. No address block, no date, no [placeholders], no markdown, no notes.
+6. If the resume is short, still write the best letter you can from it. Never refuse.
+
+Candidate resume:
+{req.resume_text[:12000] or "Not provided (use general skills expected for the role)"}
+"""
     try:
-        letter = call_llm(prompt)
-        return {"letter": letter}
+        letter = call_llm(prompt, system="You are an expert career consultant.", temperature=0.4)
+        return {"letter": letter.strip()}
     except Exception as e:
         print(f"Cover Letter LLM Error: {e}")
-    
-    return {"letter": f"Dear Hiring Manager at {req.company_name},\n\n[MOCKED] I am writing to apply for the {req.job_role} role..."}
+        raise HTTPException(status_code=503, detail="Could not generate a cover letter right now. Please try again in a moment.")
 
 class MockInterviewRequest(BaseModel):
     job_role: str
